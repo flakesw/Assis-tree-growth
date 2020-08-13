@@ -7,6 +7,7 @@
 
 #-----------------------------------------------------------------
 # Load libraries
+set.seed(129021)
 
 library("plyr")
 library("effects")
@@ -17,7 +18,6 @@ library("ggpubr")
 library("reshape2")
 library("ggplot2")
 library("ResourceSelection")
-
 
 #-----------------------------------------------------------------
 # Helper functions
@@ -42,9 +42,6 @@ get_heights_csas <- function(plot_no, year){
   if(year == 2006) return(plot[plot$Alive2006 == "v", c("Current.number", "H.2006", "G2006..m2.")])
   if(year == 2011) return(plot[plot$Alive2011 == "v", c("Current.number", "H.2011..m.", "G2011..m2.")])
 }
-
-
-
 
 
 vif.mer <- function (fit) {
@@ -96,6 +93,13 @@ logit <- function(p){
 inv.logit <- function(x){
   1/(1 + exp(-x))
 }
+
+# function to find the nearest y-value for an x data point, to add to partial residuals
+# for plotting. Stolen from effects package
+closest <- function(x, x0){
+  apply(outer(x, x0, FUN = function(x, x0) abs(x - x0)), 1, which.min)
+}
+
 #-----------------------------------------------------------------
 # Data prep
 tree_data <- read.csv("./Giselda_data_per_tree_sf_edit.csv", stringsAsFactors = FALSE)
@@ -130,7 +134,11 @@ tree_data$dg.2006.cm <- as.numeric(tree_data$dg.2006.cm)
 tree_data$dg.2016.cm <- as.numeric(tree_data$dg.2016.cm)
 tree_data$dg.2011.cm <- as.numeric(tree_data$dg.2011.cm)
 
-#Calculate the one-sided competition index for 2006 and for 2011
+
+tree_data$bai <- tree_data$dg.2016.cm - tree_data$dg.2006.cm
+# Calculate the one-sided competition index for 2006 and for 2011
+# this uses the entire dataset, not removing trees with negative growth 
+# and using only live trees
 
 for(i in 1:nrow(tree_data)){
   tree_no <- tree_data[i, "Current.number"]
@@ -159,16 +167,41 @@ tree_data$Died2016 <- as.factor(ifelse(tree_data$Alive2011 == "v" & tree_data$Al
                                        "y", "n"))
 
 
-#remove negative growth
-tree_data_pos <- tree_data[tree_data$dbh.annual.increment.cm._10.years >0, ]
+# recalculate growth rates
+# calculate growth rate for ingrowths
+for(i in 1:nrow(tree_data)){
+  row <- tree_data[i, ]
+  if(row$Added == 2006){
+    tree_data[i, "dbh.annual.increment.cm._10.years"] <- (as.numeric(row$dg.2016.cm) - as.numeric(row$dg.2006.cm))/10
+  }
+  if(row$Added == 2011){
+    tree_data[i, "dbh.annual.increment.cm._10.years"] <- (as.numeric(row$dg.2016.cm) - as.numeric(row$dg.2011.cm))/5
+  }
+}
 
+
+t.test(tree_data[tree_data$Added == "2006", "dbh.annual.increment.cm._10.years"],
+         tree_data[tree_data$Added == "2011", "dbh.annual.increment.cm._10.years"])
+
+#remove negative growth
+tree_data_pos <- subset(tree_data, dbh.annual.increment.cm._10.years > 0)
+
+#only include trees originally in the plot
+tree_data_pos <- subset(tree_data_pos, Added == 2006)
+
+#only trees with 2006 diameter
+tree_data_pos <- subset(tree_data_pos, !is.na(dg.2006.cm))
+tree_data_pos <- subset(tree_data_pos, dg.2006.cm > 0)
 
 # PCA on soils
 
-pca_data <- plot_data[, c(4,5,6,9,13,17)]
+#sand fraction was calculated weirdly
+plot_data$Total_sand <- plot_data$Coarse.sand.. + plot_data$Fine.sand..
+pca_data <- plot_data[, c(5,6,7,8,9,13,17,19)]
+
 pca <- princomp(scale(pca_data))
 summary(pca)
-biplot(pca)
+biplot(pca, var.axes = TRUE)
 pca$loadings
 pca$scores
 
@@ -180,10 +213,6 @@ plot_data$PC2 <- pca$scores[, 2]
 #merge all data together
 all_data_pos <- join(tree_data_pos, plot_data, by = c("Plot"))
 all_data<- join(tree_data, plot_data, by = c("Plot"))
-
-
-#remove NAs from growth data
-all_data_pos <- all_data_pos[!is.na(all_data_pos$dbh.annual.increment.cm._10.years), ]
 
 
 sp_list <- all_data[which(!duplicated(all_data$Species..names.not.updated.)), ]
@@ -277,7 +306,7 @@ mod10 <- lmer(log(dbh.annual.increment.cm._10.years) ~ scale(log(dg.2006.cm))*C.
   r.squaredGLMM(mod10)
   AICc(mod10)  
   
-mod11 <- lmer(log(dbh.annual.increment.cm._10.years) ~ scale(log(dg.2006.cm)) +
+mod11 <- lmer(log(bai) ~ scale(log(dg.2006.cm)) +
                 scale(PC1) + scale(BA.above2011)*C.Cerrado..G.generalist. + 
                 (1|Code),
               data = all_data_pos)
@@ -299,10 +328,8 @@ mod12 <- lmer(log(dbh.annual.increment.cm._10.years) ~ scale(log(dg.2006.cm))*C.
 #----------------------------------------------------------------------
 # Full model: FT x CI interaction with soils
 
-ft_ci_soils_lmm <- lmer(log(dbh.annual.increment.cm._10.years) ~ scale(log(dg.2006.cm)) + 
-                          C.Cerrado..G.generalist. + 
-                          scale(BA.above2011) * C.Cerrado..G.generalist.  + 
-                          scale(PC1)  +  
+ft_ci_soils_lmm <- lmer(log(dbh.annual.increment.cm._10.years) ~ scale(log(dg.2006.cm)) +
+                          scale(PC1) + scale(BA.above2011)*C.Cerrado..G.generalist. + 
                           (1|Code),
                         data = all_data_pos)
 
@@ -348,11 +375,11 @@ qqmath(ranef(ft_ci_soils_lmm, condVar = TRUE), strip = FALSE)$Plot
 qqmath(ranef(ft_ci_soils_lmm, condVar = TRUE), strip = FALSE)$Code
 
 
-## Species growth rates (appendix xx)
-ranef_sp <- ranef(ft_ci_soils_lmm, condVar = TRUE)$Code
-sp_names <- rownames(ranef_sp)[order(ranef_sp)]
-ranef_sp_df <- data.frame(rel_growth = ranef_sp[order(ranef_sp), ])
-ranef_sp_df$Code <- sp_names
+## Species growth rates (appendix table 1)
+ranef_sp <- exp(ranef(ft_ci_soils_lmm, condVar = TRUE)$Code)
+ranef_sp_df <- data.frame(rel_growth = ranef_sp$`(Intercept)`,
+                          Code = rownames(ranef_sp))
+
 ranef_sp_df <- join(ranef_sp_df, 
                     tree_data[, c("Code",
                                   "Species..names.not.updated.",
@@ -363,10 +390,13 @@ ranef_sp_df <- join(ranef_sp_df,
                     type = "left",
                     match = "first")
 
-ranef_sp_df$abs_growth <- (coef(ft_ci_soils_lmm)$Code[["(Intercept)"]])
+ranef_sp_df <- ranef_sp_df[order(ranef_sp_df$rel_growth), ]
 
+sp_table <- as.data.frame(table(all_data_pos$Code))
+names(sp_table) <- c("Code", "Freq")
+ranef_sp_df <- join(ranef_sp_df, sp_table, by = c("Code"))
 
-write.csv(ranef_sp, "species_growth_rates.csv")
+write.csv(ranef_sp_df, "species_growth_rates.csv")
 
 
 
@@ -383,7 +413,8 @@ plot_data_sub <- plot_data[plot_data$Plot %in% soils2$Plot, ]
 plot_data_sub <- join(plot_data_sub, soils2, by = "Plot")
 plot_data_sub <- join(plot_data_sub, rain, by = "Plot")
 
-pca_sub <- princomp(scale(plot_data_sub[, c(4,5,6,9,13,31,32,33,34,54,55,56,57)]))
+
+pca_sub <- princomp(scale(plot_data_sub[, c(5,6,7,8,9,13,31,32,33,34,54,55,56,57)]))
 summary(pca_sub)
 plot_data_sub$PC1_sub <- pca_sub$scores[, 1]
 plot_data_sub$PC2_sub <- pca_sub$scores[, 2]
@@ -391,7 +422,7 @@ plot_data_sub$PC2_sub <- pca_sub$scores[, 2]
 all_data_sub <- join(plot_data_sub, tree_data_pos, by = "Plot")
 
 soils_full_lmm <- lmer(log(dbh.annual.increment.cm._10.years) ~ scale(log(dg.2006.cm)) +
-                         scale(BA.above2011)*C.Cerrado..G.generalist. + scale(PC1) + scale(PC2) + 
+                         scale(BA.above2011)*C.Cerrado..G.generalist. + scale(PC1_sub) + scale(PC2_sub) + 
                          scale(Net.rainfall..) +
                          (1|Code),
                        data = all_data_sub)
@@ -400,7 +431,7 @@ AICc(soils_full_lmm)
 vif.mer(soils_full_lmm)
 
 soils_full_ba_lmm <- lmer(log(dbh.annual.increment.cm._10.years) ~ scale(log(dg.2006.cm)) +
-                         scale(BA.above2011)*C.Cerrado..G.generalist. + scale(PC1) + scale(PC2) + 
+                         scale(BA.above2011)*C.Cerrado..G.generalist. + scale(PC1_sub) + scale(PC2_sub) + 
                          scale(TBA.2011.m2.ha.1) +
                          (1|Code),
                        data = all_data_sub)
@@ -468,11 +499,51 @@ hl2 <- hoslem.test(mort_ft_ci_soils_glm_2016$y,
 #-----------------------------------------------------
 # Effects plots
 #-----------------------------------------------------
+
 #------------------------------------------------------------------------------
 # Figure 1
+# Overall plot-level results
+#------------------------------------------------------------------------------
+tiff(filename="./plots/Figure 1 overall growth basal area.tiff", 
+     type = "cairo",
+     antialias = "gray",
+     compression = "lzw",
+     units="in", 
+     width = 3, 
+     height=3, 
+     pointsize=7, 
+     res=600)
+
+par(mar = c(5.1, 5.1, 2, 1))
+
+plot(plot_data$Diameter.increment.cm.yr ~ plot_data$TBA.2006.m2ha.1, 
+     pch = 21,
+     bg = "darkgray",
+     xlab = "",
+     ylab = "",
+     xaxt = "n",
+     yaxt = "n")
+
+abline(coef(lm(plot_data$Diameter.increment.cm.yr ~ plot_data$TBA.2006.m2ha.1)))
+
+mtext(side = 1, text = expression(paste("Stand basal area (m"^"2"," ha"^"-1",")")),
+      line = 2.8, cex = 1.6)
+mtext(side = 2, text = expression(paste("Mean diameter increment (cm year"^"-1", ")")), 
+      line = 2.8, cex = 1.6)
+
+axis(side =1, cex.axis = 1.5)
+axis(side =2, cex.axis = 1.5)
+
+dev.off()
+
+
+
+
+#------------------------------------------------------------------------------
+# Figure 2
 # Growth ~ soil variables
 #------------------------------------------------------------------------------
-tiff(filename="./plots/Figure 1 soil variables effect plot.tiff", 
+tiff(filename="./plots/Figure 2 soil variables effect plot with partial residuals.tiff", 
      type = "cairo",
      antialias = "gray",
      compression = "lzw",
@@ -485,7 +556,33 @@ tiff(filename="./plots/Figure 1 soil variables effect plot.tiff",
 par(mar = c(5.1, 5.1, 2, 1))
 
 eff <- Effect(focal.predictors = c("PC1"), 
-              mod = ft_ci_soils_lmm, xlevels = 100, transformation = list(link = log, inverse = exp))
+              mod = ft_ci_soils_lmm, xlevels = 100, transformation = list(link = log, inverse = exp),
+              partial.residuals = TRUE)
+
+y <- eff$fit
+x <- eff[["x"]]$PC1
+x.fit <- eff[["x.all"]]$PC1
+
+fitted <- y[closest(x.fit, x)]
+resids <- eff$residuals + fitted
+exp_resids <- exp(resids)
+
+resid_df <- data.frame(x.fit,
+                       resids)
+
+e1_r_agg <- aggregate(resid_df, by = list(resid_df$x.fit), FUN = mean)[, c(2,3)]
+e1_r_agg[, 3] <- aggregate(resid_df, by = list(resid_df$x.fit), FUN = sd)[, 3]
+names(e1_r_agg) <- c("x.fit", "mean_part_resids", "sd_resids")
+e1_r_agg$low <- e1_r_agg$mean_part_resids - e1_r_agg$sd_resids
+e1_r_agg$high <- e1_r_agg$mean_part_resids + e1_r_agg$sd_resids
+e1_r_agg$exp_low <- exp(e1_r_agg$mean_part_resids - e1_r_agg$sd_resids)
+e1_r_agg$exp_high <- exp(e1_r_agg$mean_part_resids + e1_r_agg$sd_resids)
+e1_r_agg$exp_mean_resids <- exp(e1_r_agg[, 2])
+
+
+test <- plot(eff)
+
+
 eff2 <- Effect(focal.predictors = c("PC1"), 
                mod = mod3, xlevels = 100, transformation = list(link = log, inverse = exp))
 
@@ -500,16 +597,90 @@ dat2 <- data.frame(y = exp(eff2$fit),
                    soil = eff2[["x"]][["PC1"]])
 
 plot(x = NA, 
-     xlim = c(-3, 3),
-     ylim = c(0.05, 0.25),
+     xlim = c(-3,3.4),
+     ylim = c(0,0.6),
      xlab = "",
      ylab = "",
      xaxt = "n", 
      yaxt = "n")
 
+points(e1_r_agg$exp_mean_resids ~ e1_r_agg$x.fit, 
+       pch = 21, 
+       bg= "darkblue",
+       col = "darkblue")
+arrows(y0 = e1_r_agg$exp_low, x0 = e1_r_agg$x.fit, 
+       y1 = e1_r_agg$exp_high, x1 = e1_r_agg$x.fit,
+       code = 3,
+       angle = 90,
+       length = 0.02,
+       lwd = 0.5)
+
 lines(dat$y ~ dat$soil, col = "darkblue", lwd = 2)
 polygon(c(dat$soil, rev(dat$soil)), c(dat$upper, rev(dat$lower)),
         col = addTrans("darkblue",30), border = NA)
+# points(exp_resids ~ x.fit)
+
+
+lines(dat2$y ~ dat2$soil, col = "magenta", lwd = 2)
+polygon(c(dat2$soil, rev(dat2$soil)), c(dat2$upper, rev(dat2$lower)),
+        col = addTrans("magenta",30), border = NA)
+
+mtext(side = 1, text = "Soil PC1", line = 2.7, cex = 1.8)
+mtext(side = 2, text = expression(paste("Diameter increment (cm year"^"-1", ")")), 
+      line = 2.7, cex = 1.8)
+
+axis(side =1, cex.axis = 1.5)
+axis(side =2, cex.axis = 1.5)
+
+legend("topleft", legend = c("Soils Alone", "Full Model"), col = c("magenta", "darkblue"),
+       lty = 1)
+
+dev.off()
+
+
+tiff(filename="./plots/Figure 2 soil variables effect plot.tiff", 
+     type = "cairo",
+     antialias = "gray",
+     compression = "lzw",
+     units="in", 
+     width = 3, 
+     height=3, 
+     pointsize=7, 
+     res=600)
+
+par(mar = c(5.1, 5.1, 2, 1))
+
+eff <- Effect(focal.predictors = c("PC1"), 
+              mod = ft_ci_soils_lmm, xlevels = 100, transformation = list(link = log, inverse = exp),
+              partial.residuals = TRUE)
+
+eff2 <- Effect(focal.predictors = c("PC1"), 
+               mod = mod3, xlevels = 100, transformation = list(link = log, inverse = exp))
+
+dat <- data.frame(y = exp(eff$fit),
+                  lower = exp(eff$lower),
+                  upper = exp(eff$upper),
+                  soil = eff[["x"]][["PC1"]])
+
+dat2 <- data.frame(y = exp(eff2$fit),
+                   lower = exp(eff2$lower),
+                   upper = exp(eff2$upper),
+                   soil = eff2[["x"]][["PC1"]])
+
+plot(x = NA, 
+     xlim = c(-3,3.4),
+     ylim = c(0.08, 0.25),
+     xlab = "",
+     ylab = "",
+     xaxt = "n", 
+     yaxt = "n")
+
+
+lines(dat$y ~ dat$soil, col = "darkblue", lwd = 2)
+polygon(c(dat$soil, rev(dat$soil)), c(dat$upper, rev(dat$lower)),
+        col = addTrans("darkblue",30), border = NA)
+# points(exp_resids ~ x.fit)
+
 
 lines(dat2$y ~ dat2$soil, col = "magenta", lwd = 2)
 polygon(c(dat2$soil, rev(dat2$soil)), c(dat2$upper, rev(dat2$lower)),
@@ -528,14 +699,87 @@ legend("topleft", legend = c("Soils Alone", "Full Model"), col = c("magenta", "d
 dev.off()
 
 #------------------------------------------------------------------------------
-# Figure 2
+# Figure 3
 # Growth ~ diam by FT
 #------------------------------------------------------------------------------
 
 eff <- Effect(focal.predictors = c("dg.2006.cm", "C.Cerrado..G.generalist."), 
-              mod = ft_ci_soils_lmm, xlevels = 100, transformation = list(link = log, inverse = exp))
+              mod = ft_ci_soils_lmm, xlevels = 100, transformation = list(link = log, inverse = exp),
+              partial.residuals = TRUE)
 
-tiff(filename="./plots/Figure 2 increment_diam_by_fg.tiff", 
+y <- eff$fit
+x <- eff[["x"]]$"dg.2006.cm"
+x.fit <- eff[["x.all"]]$"dg.2006.cm"
+fg <- eff[["x.all"]]$"C.Cerrado..G.generalist."
+
+data_orig <- data.frame(x.fit, 
+                        fg)
+
+#make sure we match the correct line
+fitted <- ifelse(data_orig$fg == "C", y[1:100][closest(x.fit, x[1:100])],
+                 y[101:200][closest(x.fit, x[101:200])])
+  
+resids <- eff$residuals + fitted
+exp_resids <- exp(resids)
+
+
+
+tiff(filename="./plots/Figure 3 increment_diam_by_fg_with_partial_residuals.tiff", 
+     type = "cairo",
+     antialias = "gray",
+     compression = "lzw",
+     units="in", 
+     width = 5, 
+     height=5, 
+     pointsize=7, 
+     res=600)
+
+dat <- data.frame(y = exp(eff$fit),
+                  lower = exp(eff$lower),
+                  upper = exp(eff$upper),
+                  diam = eff[["x"]][["dg.2006.cm"]],
+                  fg = eff[["x"]][["C.Cerrado..G.generalist."]])
+
+par(mar = c(5.1, 5.1, 2, 1))
+
+plot(x = NA, 
+     xlim = c(5, 60),
+     ylim = c(0.001, 1.2),
+     xlab = "",
+     ylab = "",
+     xaxt = "n", 
+     yaxt = "n",
+     log = "xy")
+
+points(exp_resids ~ x.fit, 
+       col = ifelse(fg == "G", addTrans("#1b9e77",50), addTrans("#d95f02",50)),
+       bg = ifelse(fg == "G", addTrans("#1b9e77",50), addTrans("#d95f02",50)),
+       pch = 21,
+       cex = 0.5)
+
+dat_sub <- dat[dat$fg == "G", ]
+lines(dat_sub$y ~ dat_sub$diam, col = "#1b9e77", lwd = 2)
+polygon(c(dat_sub$diam, rev(dat_sub$diam)), c(dat_sub$upper, rev(dat_sub$lower)),
+        col = addTrans("#1b9e77",30), border = NA)
+
+dat_sub <- dat[dat$fg == "C", ]
+lines(dat_sub$y ~ dat_sub$diam, col = "#d95f02", lwd = 2)
+polygon(c(dat_sub$diam, rev(dat_sub$diam)), c(dat_sub$upper, rev(dat_sub$lower)),
+        col = addTrans("#d95f02",30), border = NA)
+
+mtext(side = 1, text = "Diameter (cm)", line = 2.7, cex = 1.8)
+mtext(side = 2, text = expression(paste("Diameter increment (cm year"^"-1", ")")), 
+      line = 2.7, cex = 1.8)
+
+axis(side =1, cex.axis = 1.5)
+axis(side =2, cex.axis = 1.5)
+
+legend("topright", legend = c("Forest species", "Savanna species"), col = c("#1b9e77", "#d95f02"),
+       lty = 1)
+
+dev.off()
+
+tiff(filename="./plots/Figure 3 increment_diam_by_fg.tiff", 
      type = "cairo",
      antialias = "gray",
      compression = "lzw",
@@ -555,7 +799,7 @@ par(mar = c(5.1, 5.1, 2, 1))
 
 plot(x = NA, 
      xlim = c(5, 60),
-     ylim = c(0.05, .23),
+     ylim = c(0.05, 0.25),
      xlab = "",
      ylab = "",
      xaxt = "n", 
@@ -583,16 +827,58 @@ legend("topright", legend = c("Forest species", "Savanna species"), col = c("#1b
 
 dev.off()
 
+# pdf(file = "growth_figure_for_video.pdf", width = 3, height =3, pointsize = 7)
+# 
+# dat <- data.frame(y = exp(eff$fit),
+#                   lower = exp(eff$lower),
+#                   upper = exp(eff$upper),
+#                   diam = eff[["x"]][["dg.2006.cm"]],
+#                   fg = eff[["x"]][["C.Cerrado..G.generalist."]])
+# 
+# par(mar = c(5.1, 5.1, 2, 1))
+# 
+# plot(x = NA, 
+#      xlim = c(5, 60),
+#      ylim = c(0.05, .23),
+#      xlab = "",
+#      ylab = "",
+#      xaxt = "n", 
+#      yaxt = "n")
+# 
+# dat_sub <- dat[dat$fg == "G", ]
+# lines(dat_sub$y ~ dat_sub$diam, col = "#1b9e77", lwd = 2)
+# polygon(c(dat_sub$diam, rev(dat_sub$diam)), c(dat_sub$upper, rev(dat_sub$lower)),
+#         col = addTrans("#1b9e77",30), border = NA)
+# 
+# dat_sub <- dat[dat$fg == "C", ]
+# lines(dat_sub$y ~ dat_sub$diam, col = "#d95f02", lwd = 2)
+# polygon(c(dat_sub$diam, rev(dat_sub$diam)), c(dat_sub$upper, rev(dat_sub$lower)),
+#         col = addTrans("#d95f02",30), border = NA)
+# 
+# mtext(side = 1, text = "Diameter (cm)", line = 2.7, cex = 1.8)
+# mtext(side = 2, text = expression(paste("Diameter increment (cm year"^"-1", ")")), 
+#       line = 2.7, cex = 1.8)
+# 
+# axis(side =1, cex.axis = 1.5)
+# axis(side =2, cex.axis = 1.5)
+# 
+# legend("topright", legend = c("Forest species", "Savanna species"), col = c("#1b9e77", "#d95f02"),
+#        lty = 1)
+# 
+# dev.off()
+
+
 #------------------------------------------------------------------------------
-# Figure 3
+# Figure 4
 # Growth ~ BA above by FT
 #------------------------------------------------------------------------------
 
 eff <- Effect(focal.predictors = c("BA.above2011", "C.Cerrado..G.generalist."), 
               mod = ft_ci_soils_lmm, xlevels = 100, 
-              transformation = list(link = log, inverse = exp))
+              transformation = list(link = log, inverse = exp),
+              partial.residuals = TRUE)
 
-tiff(filename="./plots/Figure 3 increment_BA_above_by_fg.tiff", 
+tiff(filename="./plots/Figure 4 increment_BA_above_by_fg.tiff", 
      type = "cairo",
      antialias = "gray",
      compression = "lzw",
@@ -608,27 +894,52 @@ dat <- data.frame(y = exp(eff$fit),
                   ba = eff[["x"]][["BA.above2011"]],
                   fg = eff[["x"]][["C.Cerrado..G.generalist."]])
 
+y <- eff$fit
+x <- eff[["x"]]$"BA.above2011"
+x.fit <- eff[["x.all"]]$"BA.above2011"
+fg <- eff[["x.all"]]$"C.Cerrado..G.generalist."
+
+data_orig <- data.frame(x.fit, 
+                        fg)
+
+#make sure we match the correct line
+fitted <- ifelse(data_orig$fg == "C", y[1:100][closest(x.fit, x[1:100])],
+                 y[101:200][closest(x.fit, x[101:200])])
+
+resids <- eff$residuals + fitted
+exp_resids <- exp(resids)
+
+
+
 par(mar = c(5.1, 5.1, 2, 1))
 
 plot(x = NA, 
-     xlim = c(0, 2.5),
-     ylim = c(0, 0.5),
+     xlim = c(0.01, 30),
+     ylim = c(0.01, 2),
      xlab = "",
      ylab = "",
      xaxt = "n", 
-     yaxt = "n")
+     yaxt = "n",
+     log = "y")
+
+points(exp_resids ~ I(x.fit*10), 
+       col = ifelse(fg == "G", addTrans("#1b9e77",50), addTrans("#d95f02",50)),
+       bg = ifelse(fg == "G", addTrans("#1b9e77",50), addTrans("#d95f02",50)),
+       pch = 21,
+       cex = 1)
+
 
 dat_sub <- dat[dat$fg == "G", ]
-lines(dat_sub$y ~ dat_sub$ba, col = "#1b9e77", lwd = 2)
-polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
+lines(dat_sub$y ~ I(dat_sub$ba * 10), col = "#1b9e77", lwd = 2)
+polygon(c(I(dat_sub$ba*10), rev(I(dat_sub$ba*10))), c(dat_sub$upper, rev(dat_sub$lower)),
         col = addTrans("#1b9e77",30), border = NA)
 
 dat_sub <- dat[dat$fg == "C", ]
-lines(dat_sub$y ~ dat_sub$ba, col = "#d95f02", lwd = 2)
-polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
+lines(dat_sub$y ~ I(dat_sub$ba * 10), col = "#d95f02", lwd = 2)
+polygon(c(I(dat_sub$ba*10), rev(I(dat_sub$ba*10))), c(dat_sub$upper, rev(dat_sub$lower)),
         col = addTrans("#d95f02",30), border = NA)
 
-mtext(side = 1, text = expression(paste("BA above (m"^"2",")")), line = 3.1, cex = 1.8)
+mtext(side = 1, text = expression(paste("BA above (m"^"2"," ha"^"-1",")")), line = 3.1, cex = 1.8)
 mtext(side = 2, text = expression(paste("Diameter increment (cm year"^"-1", ")")), 
       line = 2.7, cex = 1.8)
 
@@ -642,15 +953,16 @@ dev.off()
 
 
 #------------------------------------------------------------------------------
-# Figure 4
+# Figure 6
 # Mortality ~ BA by FT
 #------------------------------------------------------------------------------
 eff <- Effect(focal.predictors = c("BA.above2006", "C.Cerrado..G.generalist."), 
               mod = mort_ft_ci_soils_glm_2011, xlevels = 100)
-eff2 <- Effect(focal.predictors = c("BA.above2011", "C.Cerrado..G.generalist."), 
-               mod = mort_ft_ci_soils_glm_2016, xlevels = 100)
+eff2 <- Effect(focal.predictors = c("BA.above2011", "C.Cerrado..G.generalist."),
+mod = mort_ft_ci_soils_glm_2016, xlevels = 100)
 
-tiff(filename="./plots/Figure 4 mortality_ba_above_by_fg.tiff", 
+
+tiff(filename="./plots/Figure 5 mortality_ba_above_by_fg.tiff", 
      type = "cairo",
      antialias = "gray",
      compression = "lzw",
@@ -660,23 +972,23 @@ tiff(filename="./plots/Figure 4 mortality_ba_above_by_fg.tiff",
      pointsize=7, 
      res=600)
 
-dat1 <- data.frame(y = inv.logit(eff$fit),
-                   lower = inv.logit(eff$lower),
-                   upper = inv.logit(eff$upper),
-                   ba = eff[["x"]][["BA.above2006"]],
+dat1 <- data.frame(y = inv.logit(eff$fit)/5,
+                   lower = inv.logit(eff$lower)/5,
+                   upper = inv.logit(eff$upper)/5,
+                   ba = eff[["x"]][["BA.above2006"]]*10,
                    fg = eff[["x"]][["C.Cerrado..G.generalist."]])
 
-dat2 <- data.frame(y = inv.logit(eff2$fit),
-                   lower = inv.logit(eff2$lower),
-                   upper = inv.logit(eff2$upper),
-                   ba = eff2[["x"]][["BA.above2011"]],
+dat2 <- data.frame(y = inv.logit(eff2$fit)/5,
+                   lower = inv.logit(eff2$lower)/5,
+                   upper = inv.logit(eff2$upper)/5,
+                   ba = eff2[["x"]][["BA.above2011"]]*10,
                    fg = eff2[["x"]][["C.Cerrado..G.generalist."]])
 
 par(mar = c(5.1, 5.1, 2, 1))
 
 plot(x = NA, 
-     xlim = c(0, 3),
-     ylim = c(0, 0.6),
+     xlim = c(0, 30),
+     ylim = c(0, 0.12),
      xlab = "",
      ylab = "",
      xaxt = "n", 
@@ -702,8 +1014,8 @@ lines(dat_sub$y ~ dat_sub$ba, col = "#d95f02", lwd = 2, lty = 2)
 polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
         col = addTrans("#d95f02",30), border = NA)
 
-mtext(side = 1, text = expression(paste("BA above (m"^"2",")")), line = 3.1, cex = 1.8)
-mtext(side = 2, text = expression(paste("p(topkill)")), 
+mtext(side = 1, text = expression(paste("BA above (m"^"2"," ha"^"-1",")")), line = 3.1, cex = 1.8)
+mtext(side = 2, text = expression(paste("p(mortality)")), 
       line = 2.7, cex = 1.8)
 
 axis(side =1, cex.axis = 1.5)
@@ -711,6 +1023,73 @@ axis(side =2, cex.axis = 1.5)
 
 legend("topleft", legend = c("Forest species, 2006", "Forest species, 2011", "Savanna species, 2006", "Savanna species, 2011"), col = c("#1b9e77", "#1b9e77", "#d95f02", "#d95f02"),
        lty = c(1, 2, 1, 2))
+
+
+dev.off()
+
+
+tiff(filename="./plots/Figure 6 mortality_ba_above_by_fg_for_talk.tiff", 
+     type = "cairo",
+     antialias = "gray",
+     compression = "lzw",
+     units="in", 
+     width = 3, 
+     height=3, 
+     pointsize=7, 
+     res=600)
+
+dat1 <- data.frame(y = inv.logit(eff$fit)/5,
+                   lower = inv.logit(eff$lower)/5,
+                   upper = inv.logit(eff$upper)/5,
+                   ba = eff[["x"]][["BA.above2006"]]*10,
+                   fg = eff[["x"]][["C.Cerrado..G.generalist."]])
+
+# dat2 <- data.frame(y = inv.logit(eff2$fit),C
+#                    lower = inv.logit(eff2$lower),
+#                    upper = inv.logit(eff2$upper),
+#                    ba = eff2[["x"]][["BA.above2011"]],
+#                    fg = eff2[["x"]][["C.Cerrado..G.generalist."]])
+
+par(mar = c(5.1, 5.1, 2, 1))
+
+plot(x = NA, 
+     xlim = c(0, 30),
+     ylim = c(0, 0.12),
+     xlab = "",
+     ylab = "",
+     xaxt = "n", 
+     yaxt = "n")
+
+dat_sub <- dat1[dat1$fg == "G", ]
+lines(dat_sub$y ~ dat_sub$ba, col = "#1b9e77", lwd = 2)
+polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
+        col = addTrans("#1b9e77",30), border = NA)
+
+dat_sub <- dat1[dat1$fg == "C", ]
+lines(dat_sub$y ~ dat_sub$ba, col = "#d95f02", lwd = 2)
+polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
+        col = addTrans("#d95f02",30), border = NA)
+
+# dat_sub <- dat2[dat2$fg == "G", ]
+# lines(dat_sub$y ~ dat_sub$ba, col = "#1b9e77", lwd = 2, lty = 2)
+# polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
+#         col = addTrans("#1b9e77",30), border = NA)
+# 
+# dat_sub <- dat2[dat2$fg == "C", ]
+# lines(dat_sub$y ~ dat_sub$ba, col = "#d95f02", lwd = 2, lty = 2)
+# polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
+#         col = addTrans("#d95f02",30), border = NA)
+
+mtext(side = 1, text = expression(paste("BA above (m"^"2"," ha"^"-1",")")), line = 3.1, cex = 1.8)
+mtext(side = 2, text = expression(paste("p(mortality)")), 
+      line = 2.7, cex = 1.8)
+
+axis(side =1, cex.axis = 1.5)
+axis(side =2, cex.axis = 1.5)
+
+# legend("topleft", legend = c("Forest species, 2006", "Forest species, 2011", "Savanna species, 2006", "Savanna species, 2011"), col = c("#1b9e77", "#1b9e77", "#d95f02", "#d95f02"),
+#        lty = c(1, 2, 1, 2))
+
 
 dev.off()
 
@@ -763,7 +1142,7 @@ dev.off()
 
 #------------------------------------------------------------------------------
 # Supplemental Figure S2
-# Size-growth relationship without accounting for 
+# Size-growth relationship without accounting for covariates
 #------------------------------------------------------------------------------
 tiff(filename="./plots/Figure S2 diameter effect plot.tiff", 
      type = "cairo",
