@@ -105,10 +105,10 @@ closest <- function(x, x0){
 tree_data <- read.csv("./Giselda_data_per_tree_sf_edit.csv", stringsAsFactors = FALSE)
 plot_data <- read.csv("./Giselda_Data_per_plot.csv")[1:30, ]
 
-tree_data <- tree_data[!(tree_data$Plot %in% c(21:25)), ] #remove plots with incomplete data
+tree_data <- (tree_data[!(tree_data$Plot %in% c(21:25)), ]) #remove plots with incomplete data
 
 #remove the "forest" functional type
-tree_data[tree_data$C.Cerrado..G.generalist. == "F", ] <- "G"
+tree_data[tree_data$C.Cerrado..G.generalist. == "F", ]$C.Cerrado..G.generalist. <- "G"
 
 # replace missing data with NA
 # tree_data[tree_data$dbh.annual.increment.cm._10.years == "na", "dbh.annual.increment.cm._10.years"] <- NA
@@ -139,15 +139,19 @@ tree_data$bai <- tree_data$dg.2016.cm - tree_data$dg.2006.cm
 # Calculate the one-sided competition index for 2006 and for 2011
 # this uses the entire dataset, not removing trees with negative growth 
 # and using only live trees
+tree_data$BA.above2006 <- NA
+tree_data$BA.above2011 <- NA
 
 for(i in 1:nrow(tree_data)){
   tree_no <- tree_data[i, "Current.number"]
   tree_h <- tree_data[i, "H.2006"]
   plot_no <- tree_data[i, "Plot"]
   trees <- get_heights_csas(plot_no, 2006)
-  
+  trees <- trees[trees$Current.number != tree_no, ]
   #BA.above is the sum of basal area of taller trees
-  tree_data$BA.above2006[i] <- sum(trees[trees$H.2006 > tree_h, "G2006..m2."], na.rm = TRUE)
+  if(!is.na(tree_h)){
+    tree_data$BA.above2006[i] <- sum(trees[trees$H.2006 >= tree_h, "G2006..m2."], na.rm = TRUE)
+  }
 }
 
 for(i in 1:nrow(tree_data)){
@@ -155,9 +159,11 @@ for(i in 1:nrow(tree_data)){
   tree_h <- as.numeric(tree_data[i, "H.2011..m."])
   plot_no <- tree_data[i, "Plot"]
   trees <- get_heights_csas(plot_no, 2011)
-  
+  trees <- trees[trees$Current.number != tree_no, ]
   #BA.above is the sum of basal area of taller trees
-  tree_data$BA.above2011[i] <- sum(trees[trees$H.2011..m. > tree_h, "G2011..m2."], na.rm = TRUE)
+  if(!is.na(tree_h)){
+    tree_data$BA.above2011[i] <- sum(trees[trees$H.2011..m. >= tree_h, "G2011..m2."], na.rm = TRUE)
+  }
 }
 
 
@@ -165,6 +171,7 @@ tree_data$Died2011 <- as.factor(ifelse(tree_data$Alive2006 == "v" & tree_data$Al
                                        "y", "n"))
 tree_data$Died2016 <- as.factor(ifelse(tree_data$Alive2011 == "v" & tree_data$Alive2016 == "m",
                                        "y", "n"))
+tree_data$Died_all <- as.factor(ifelse(tree_data$Died2011 == "y" | tree_data$Died2016 == "y", "y", "n"))
 
 
 # recalculate growth rates
@@ -216,6 +223,10 @@ all_data<- join(tree_data, plot_data, by = c("Plot"))
 
 
 sp_list <- all_data[which(!duplicated(all_data$Species..names.not.updated.)), ]
+
+#how does QMD change over the gradient?
+qmd <- aggregate(as.numeric(tree_data$dg2006..cm.), by = list(tree_data$Plot), FUN = function(x){sqrt(mean(x^2, na.rm = TRUE))})
+plot(qmd$x ~ plot_data$TBA.2006.m2ha.1)
 
 
 #----------------------------------------------------------------------
@@ -306,13 +317,14 @@ mod10 <- lmer(log(dbh.annual.increment.cm._10.years) ~ scale(log(dg.2006.cm))*C.
   r.squaredGLMM(mod10)
   AICc(mod10)  
   
-mod11 <- lmer(log(bai) ~ scale(log(dg.2006.cm)) +
+mod11 <- lmer(log(dbh.annual.increment.cm._10.years) ~ scale(log(dg.2006.cm)) +
                 scale(PC1) + scale(BA.above2011)*C.Cerrado..G.generalist. + 
                 (1|Code),
               data = all_data_pos)
   vif.mer(mod11)
   summary(mod11)
   r.squaredGLMM(mod11)
+  logLik(mod11)
   AICc(mod11)  
   
 mod12 <- lmer(log(dbh.annual.increment.cm._10.years) ~ scale(log(dg.2006.cm))*C.Cerrado..G.generalist. +
@@ -465,6 +477,11 @@ mort_ft_ci_soils_glm_2016 <- glm(Died2016 ~ scale(log(dg.2011.cm)) +
                                  data = all_data[all_data$dg.2011.cm > 0, ],
                                  family = binomial(link = "logit"))
 
+mort_ft_ci_soils_glm_died_all<- glm(Died_all ~ scale(log(dg.2006.cm)) +
+                                   scale(BA.above2006)*C.Cerrado..G.generalist.,
+                                 data = all_data[all_data$dg.2006.cm > 0, ],
+                                 family = binomial(link = "logit"))
+
 
 # vif.mer(mort_ft_ci_soils_glm_2011)
 
@@ -477,7 +494,6 @@ plot.roc(mort_ft_ci_soils_glm_2011$y,
 plot(Effect(mort_ft_ci_soils_glm_2011, 
             focal.predictors = c("BA.above2006", "C.Cerrado..G.generalist.")))
 
-
 summary(mort_ft_ci_soils_glm_2016)
 r.squaredGLMM(mort_ft_ci_soils_glm_2016)
 AIC(mort_ft_ci_soils_glm_2016)
@@ -488,13 +504,22 @@ plot(Effect(mort_ft_ci_soils_glm_2016,
             focal.predictors = c("BA.above2011", "C.Cerrado..G.generalist.")))
 
 
+summary(mort_ft_ci_soils_glm_died_all)
+r.squaredGLMM(mort_ft_ci_soils_glm_died_all)
+AIC(mort_ft_ci_soils_glm_died_all)
+plot.roc(mort_ft_ci_soils_glm_died_all$y, 
+         fitted(mort_ft_ci_soils_glm_died_all),print.auc = TRUE, 
+         col = "green", lty = 2)
+plot(Effect(mort_ft_ci_soils_glm_died_all, 
+            focal.predictors = c("BA.above2006", "C.Cerrado..G.generalist.")))
 
 #hosmer-lemeshow test seems pretty okay!
 hl1 <- hoslem.test(mort_ft_ci_soils_glm_2011$y, 
                    fitted(mort_ft_ci_soils_glm_2011), g=10)
 hl2 <- hoslem.test(mort_ft_ci_soils_glm_2016$y, 
                    fitted(mort_ft_ci_soils_glm_2016), g=10)
-
+hl3 <- hoslem.test(mort_ft_ci_soils_glm_died_all$y, 
+                   fitted(mort_ft_ci_soils_glm_died_all), g=10)
 
 #-----------------------------------------------------
 # Effects plots
@@ -557,7 +582,8 @@ par(mar = c(5.1, 5.1, 2, 1))
 
 eff <- Effect(focal.predictors = c("PC1"), 
               mod = ft_ci_soils_lmm, xlevels = 100, transformation = list(link = log, inverse = exp),
-              partial.residuals = TRUE)
+              partial.residuals = TRUE,
+              se = TRUE)
 
 y <- eff$fit
 x <- eff[["x"]]$PC1
@@ -774,7 +800,7 @@ mtext(side = 2, text = expression(paste("Diameter increment (cm year"^"-1", ")")
 axis(side =1, cex.axis = 1.5)
 axis(side =2, cex.axis = 1.5)
 
-legend("topright", legend = c("Forest species", "Savanna species"), col = c("#1b9e77", "#d95f02"),
+legend("topright", legend = c("Generalist species", "Savanna species"), col = c("#1b9e77", "#d95f02"),
        lty = 1)
 
 dev.off()
@@ -822,7 +848,7 @@ mtext(side = 2, text = expression(paste("Diameter increment (cm year"^"-1", ")")
 axis(side =1, cex.axis = 1.5)
 axis(side =2, cex.axis = 1.5)
 
-legend("topright", legend = c("Forest species", "Savanna species"), col = c("#1b9e77", "#d95f02"),
+legend("topright", legend = c("Generalist species", "Savanna species"), col = c("#1b9e77", "#d95f02"),
        lty = 1)
 
 dev.off()
@@ -862,7 +888,7 @@ dev.off()
 # axis(side =1, cex.axis = 1.5)
 # axis(side =2, cex.axis = 1.5)
 # 
-# legend("topright", legend = c("Forest species", "Savanna species"), col = c("#1b9e77", "#d95f02"),
+# legend("topright", legend = c("Generalist species", "Savanna species"), col = c("#1b9e77", "#d95f02"),
 #        lty = 1)
 # 
 # dev.off()
@@ -946,7 +972,7 @@ mtext(side = 2, text = expression(paste("Diameter increment (cm year"^"-1", ")")
 axis(side =1, cex.axis = 1.5)
 axis(side =2, cex.axis = 1.5)
 
-legend("topright", legend = c("Forest species", "Savanna species"), col = c("#1b9e77", "#d95f02"),
+legend("topright", legend = c("Generalist species", "Savanna species"), col = c("#1b9e77", "#d95f02"),
        lty = 1)
 
 dev.off()
@@ -959,7 +985,7 @@ dev.off()
 eff <- Effect(focal.predictors = c("BA.above2006", "C.Cerrado..G.generalist."), 
               mod = mort_ft_ci_soils_glm_2011, xlevels = 100)
 eff2 <- Effect(focal.predictors = c("BA.above2011", "C.Cerrado..G.generalist."),
-mod = mort_ft_ci_soils_glm_2016, xlevels = 100)
+              mod = mort_ft_ci_soils_glm_2016, xlevels = 100)
 
 
 tiff(filename="./plots/Figure 5 mortality_ba_above_by_fg.tiff", 
@@ -1021,7 +1047,7 @@ mtext(side = 2, text = expression(paste("p(mortality)")),
 axis(side =1, cex.axis = 1.5)
 axis(side =2, cex.axis = 1.5)
 
-legend("topleft", legend = c("Forest species, 2006", "Forest species, 2011", "Savanna species, 2006", "Savanna species, 2011"), col = c("#1b9e77", "#1b9e77", "#d95f02", "#d95f02"),
+legend("topleft", legend = c("Generalist species, 2006", "Generalist species, 2011", "Savanna species, 2006", "Savanna species, 2011"), col = c("#1b9e77", "#1b9e77", "#d95f02", "#d95f02"),
        lty = c(1, 2, 1, 2))
 
 
@@ -1087,8 +1113,94 @@ mtext(side = 2, text = expression(paste("p(mortality)")),
 axis(side =1, cex.axis = 1.5)
 axis(side =2, cex.axis = 1.5)
 
-# legend("topleft", legend = c("Forest species, 2006", "Forest species, 2011", "Savanna species, 2006", "Savanna species, 2011"), col = c("#1b9e77", "#1b9e77", "#d95f02", "#d95f02"),
+# legend("topleft", legend = c("Generalist species, 2006", "Generalist species, 2011", "Savanna species, 2006", "Savanna species, 2011"), col = c("#1b9e77", "#1b9e77", "#d95f02", "#d95f02"),
 #        lty = c(1, 2, 1, 2))
+
+
+dev.off()
+
+#------------------------------------------------------------------------------
+# Version with just one model
+#------------------------------------------------------------------------------
+eff <- Effect(focal.predictors = c("BA.above2006", "C.Cerrado..G.generalist."), 
+              mod = mort_ft_ci_soils_glm_died_all, xlevels = 100)
+
+
+tiff(filename="./plots/Figure 5 mortality_ba_above_by_fg_test.tiff", 
+     type = "cairo",
+     antialias = "gray",
+     compression = "lzw",
+     units="in", 
+     width = 3, 
+     height=3, 
+     pointsize=7,
+     res=600)
+
+dat1 <- data.frame(y = 1 - (1 - inv.logit(eff$fit))^(1/10),
+                   lower = 1 - (1-inv.logit(eff$lower))^(1/10),
+                   upper = 1 - (1-inv.logit(eff$upper))^(1/10),
+                   ba = eff[["x"]][["BA.above2006"]],
+                   fg = eff[["x"]][["C.Cerrado..G.generalist."]])
+
+par(mar = c(1,7,1,1),
+    oma = c(5,0,0,0),
+    ps = 9,
+    cex = 1,
+    yaxs = "i",
+    xaxs = "i")
+
+plot(x = NA, 
+     xlim = c(0, 3),
+     ylim = c(-0.03, 0.18),
+     xlab = "",
+     ylab = "",
+     xaxt = "n", 
+     yaxt = "n")
+
+dat_sub <- dat1[dat1$fg == "G", ]
+lines(dat_sub$y ~ dat_sub$ba, col = "#1b9e77", lwd = 2)
+polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
+        col = addTrans("#1b9e77",30), border = NA)
+
+dat_sub <- dat1[dat1$fg == "C", ]
+lines(dat_sub$y ~ dat_sub$ba, col = "#d95f02", lwd = 2)
+polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
+        col = addTrans("#d95f02",30), border = NA)
+
+
+mtext(side = 1, text = expression(paste("BA above (m"^"2"," ha"^"-1",")")), line = 3.1, cex = 1.8)
+mtext(side = 2, text = expression(paste("p(mortality)")), 
+      line = 2.7, cex = 1.8)
+
+axis(side =1, cex.axis = 1.5)
+axis(side =2, cex.axis = 1.5, at = c(0, 0.05, .1, .15))
+
+abline(h = 0)
+abline(h = 0.15)
+
+legend(x = 0, y = 0.15, legend = c("Generalist species", "Savanna species"), 
+       col = c("#1b9e77", "#d95f02"),
+       lty = c(1, 1))
+
+h <- density(all_data[all_data$Died_all == "y" & all_data$C.Cerrado..G.generalist. == "C" & 
+                        !is.na(all_data$BA.above2006), "BA.above2006"], na.rm = TRUE)
+h$y <- 0.18 - h$y/40
+lines(h, col = c("#d95f02"))
+
+h <- density(all_data[all_data$Died_all == "n" & all_data$C.Cerrado..G.generalist. == "C" & 
+                        !is.na(all_data$BA.above2006), "BA.above2006"], na.rm = TRUE)
+h$y <- -0.03 + h$y/40
+lines(h, col = c("#d95f02"))
+
+h <- density(all_data[all_data$Died_all == "y" & all_data$C.Cerrado..G.generalist. == "G" & 
+                        !is.na(all_data$BA.above2006), "BA.above2006"], na.rm = TRUE)
+h$y <- 0.18 - h$y/40
+lines(h, col = c("#1b9e77"))
+
+h <- density(all_data[all_data$Died_all == "n" & all_data$C.Cerrado..G.generalist. == "G" & 
+                        !is.na(all_data$BA.above2006), "BA.above2006"], na.rm = TRUE)
+h$y <- -0.03 + h$y/40
+lines(h, col = c("#1b9e77"))
 
 
 dev.off()
@@ -1186,3 +1298,321 @@ axis(side =2, cex.axis = 1.5)
 dev.off()
 
 
+
+#------------------------------------------------------------------------------
+# Basal area increment by functional type
+#------------------------------------------------------------------------------
+#todo: redo this to calculate the total in both timesteps THEN subtract
+change_2006 <- data.frame(Plot = unique(tree_data$Plot),
+                     BA_s = numeric(length(unique(tree_data$Plot))),
+                     BA_g = numeric(length(unique(tree_data$Plot))),
+                     BA_total = numeric(length(unique(tree_data$Plot))),
+                     BA_s_died = numeric(length(unique(tree_data$Plot))),
+                     BA_g_died = numeric(length(unique(tree_data$Plot)))
+                     )
+change_2011 <- change_2006
+change_2016 <- change_2006
+
+
+#sum the basal area by each functional type
+for(plot in unique(tree_data$Plot)){
+  temp <- tree_data[tree_data$Plot == plot, ]
+  change_2006[change_2006$Plot == plot, ]$BA_s <- sum((((temp[temp$C.Cerrado..G.generalist. == "C", "dg.2006.cm"]/2)^2)*pi), na.rm = TRUE)/10000
+  change_2006[change_2006$Plot == plot, ]$BA_g <- sum((((temp[temp$C.Cerrado..G.generalist. == "G", "dg.2006.cm"]/2)^2)*pi), na.rm = TRUE)/10000
+  change_2006[change_2006$Plot == plot, ]$BA_total <- change_2006[change_2006$Plot == plot, ]$BA_s + change_2006[change_2006$Plot == plot, ]$BA_g
+  change_2006[change_2006$Plot == plot, ]$BA_s_died <- NA
+  change_2006[change_2006$Plot == plot, ]$BA_g_died <- NA
+  
+  
+  change_2011[change_2011$Plot == plot, ]$BA_s <- sum((((temp[temp$C.Cerrado..G.generalist. == "C", "dg.2011.cm"]/2)^2)*pi), na.rm = TRUE)/10000
+  change_2011[change_2011$Plot == plot, ]$BA_g <- sum((((temp[temp$C.Cerrado..G.generalist. == "G", "dg.2011.cm"]/2)^2)*pi), na.rm = TRUE)/10000
+  change_2011[change_2011$Plot == plot, ]$BA_total <- change_2011[change_2011$Plot == plot, ]$BA_s + change_2011[change_2011$Plot == plot, ]$BA_g
+  change_2011[change_2011$Plot == plot, ]$BA_s_died <- sum((((temp[temp$C.Cerrado..G.generalist. == "C" & temp$Died2011 == "y", "dg.2006.cm"]/2)^2)*pi), na.rm = TRUE)/10000
+  change_2011[change_2011$Plot == plot, ]$BA_g_died <- sum((((temp[temp$C.Cerrado..G.generalist. == "G"& temp$Died2011 == "y", "dg.2006.cm"]/2)^2)*pi), na.rm = TRUE)/10000
+  
+  
+  change_2016[change_2016$Plot == plot, ]$BA_s <- sum((((temp[temp$C.Cerrado..G.generalist. == "C", "dg.2016.cm"]/2)^2)*pi), na.rm = TRUE)/10000
+  change_2016[change_2016$Plot == plot, ]$BA_g <- sum((((temp[temp$C.Cerrado..G.generalist. == "G", "dg.2016.cm"]/2)^2)*pi), na.rm = TRUE)/10000
+  change_2016[change_2016$Plot == plot, ]$BA_total <- change_2016[change_2016$Plot == plot, ]$BA_s + change_2016[change_2016$Plot == plot, ]$BA_g
+  change_2016[change_2016$Plot == plot, ]$BA_s_died <- sum((((temp[temp$C.Cerrado..G.generalist. == "C" & temp$Died2016 == "y", "dg.2011.cm"]/2)^2)*pi), na.rm = TRUE)/10000
+  change_2016[change_2016$Plot == plot, ]$BA_g_died <- sum((((temp[temp$C.Cerrado..G.generalist. == "G"& temp$Died2016 == "y", "dg.2011.cm"]/2)^2)*pi), na.rm = TRUE)/10000
+  
+}
+
+change_ba <- data.frame(Plot = change_2006$Plot,
+                        ba_tot_2006 = change_2006$BA_total,
+                        ba_inc_s = change_2016$BA_s - change_2006$BA_s,
+                        ba_inc_g = change_2016$BA_g - change_2006$BA_g,
+                        ba_died_s = change_2011$BA_s_died + change_2016$BA_s_died,
+                        ba_died_g = change_2011$BA_g_died + change_2016$BA_g_died,
+                        ba_inc_s_w_dead = change_2016$BA_s - change_2006$BA_s + change_2011$BA_s_died + change_2016$BA_s_died,
+                        ba_inc_g_w_dead = change_2016$BA_g - change_2006$BA_g + change_2011$BA_g_died + change_2016$BA_g_died
+                        )
+
+change_ba_prop <- change_ba
+change_ba_prop[, c(3, 5, 7)] <- change_ba_prop[, c(3,5,7)]/change_2006$BA_s
+change_ba_prop[, c(4, 6, 8)] <- change_ba_prop[, c(4,6,8)]/change_2006$BA_g
+
+#make three-panel figure
+
+tiff(filename="./plots/Figure 1 change in basal area proportional.tiff", 
+     type = "cairo",
+     antialias = "gray",
+     compression = "lzw",
+     units="mm", 
+     width = 90, 
+     height=200, 
+     pointsize=7, 
+     res=600)
+
+
+par(mar = c(1,7,1,1),
+    oma = c(5,0,0,0),
+    mfrow = c(3,1),
+    ps = 9,
+    cex = 1,
+    yaxs = "i")
+
+new <- data.frame(ba_tot_2006 = seq(0.5, 2.5, length.out = 100))
+
+plot(NA,
+     ylim = c(-0.7, 1.8),
+     xlim = c(0.4, 2.6),
+     xlab = expression(paste("Original basal area (m"^2, " ha"^-1, ")")),
+     ylab = expression(paste("Net change in basal area (%)")),
+     xaxt = "n",
+     yaxt = "n",
+     cex.lab = 1.2)
+
+abline(h = 0)
+
+points(ba_inc_s ~ ba_tot_2006, data = change_ba_prop, 
+       pch = 21,
+       col = "#d95f02",
+       bg = "#d95f02")
+
+mod <- lm(log(ba_inc_s + 1) ~ log(ba_tot_2006), data = change_ba_prop)
+pred <- predict(mod, newdata = new)
+lines(exp(pred) - 1 ~ new$ba_tot_2006,
+      col = "#d95f02",
+      lty = 1)
+
+
+points(ba_inc_g ~ ba_tot_2006, data = change_ba_prop, 
+       pch = 22,
+       col = "#1b9e77",
+       bg = "#1b9e77")
+mod <- lm(log(ba_inc_g + 1) ~ log(ba_tot_2006), data = change_ba_prop)
+pred <- predict(mod, newdata = new)
+lines(exp(pred) - 1 ~ new$ba_tot_2006,
+      col = "#1b9e77",
+      lty = 1)
+
+axis(side = 2, at = pretty(c(-0.7, 1.8)), labels = pretty(c(-0.7, 1.8))*100)
+axis(side = 1, at = pretty(change_ba$ba_tot_2006), labels = NA)
+
+legend(x = 0.5, y = -0.2, legend = c("Savanna species", "Generalist species"),
+       pch = c(16,15),
+       col =  c("#d95f02","#1b9e77"),
+       cex = 0.9)
+
+text(x = 0.5, y = 1.67, labels = "(a)", cex = 1.2)
+
+#just losses due to mortality
+
+plot(NA,
+     ylim = c(0, .8),
+     xlim = c(0.4, 2.6),
+     xaxt = "n",
+     yaxt = "n",
+     xlab = "",
+     ylab = expression(paste("Mortality basal area (%)")),
+     cex.lab = 1.2)
+
+abline(h = 0)
+
+points(ba_died_s ~ ba_tot_2006, data = change_ba_prop, 
+       pch = 21,
+       col = "#d95f02",
+       bg = "#d95f02")
+
+mod <- lm(log(ba_died_s + 1) ~ log(ba_tot_2006), data = change_ba_prop)
+pred <- predict(mod, newdata = new)
+lines(exp(pred) - 1 ~ new$ba_tot_2006,
+      col = "#d95f02",
+      lty = 1)
+
+
+points(ba_died_g ~ ba_tot_2006, data = change_ba_prop, 
+       pch = 22,
+       col = "#1b9e77",
+       bg = "#1b9e77")
+mod <- lm(log(ba_died_g + 1) ~ log(ba_tot_2006), data = change_ba_prop)
+pred <- predict(mod, newdata = new)
+lines(exp(pred) - 1 ~ new$ba_tot_2006,
+      col = "#1b9e77",
+      lty = 1)
+
+axis(side = 2, at = pretty(c(0,0.8)), labels = pretty(c(0,0.8))*100)
+axis(side = 1, at = pretty(change_ba$ba_tot_2006), labels = NA)
+
+
+text(x = 0.5, y = 0.75, labels = "(b)", cex = 1.2)
+
+#with resurrected trees
+plot(NA,
+     ylim = c(-0.7, 1.8),
+     xlim = c(0.4, 2.6),
+     xaxt = "n",
+     yaxt = "n",
+     xlab = "",
+     ylab = expression(paste("Change in basal area \n without mortality (%)")),
+     cex.lab = 1.2)
+
+abline(h = 0)
+
+points(ba_inc_s_w_dead ~ ba_tot_2006, data = change_ba_prop,
+       pch = 21,
+       col = "#d95f02",
+       bg = "#d95f02")
+mod <- lm(log(ba_inc_s_w_dead + 1) ~ log(ba_tot_2006), data = change_ba_prop)
+pred <- predict(mod, newdata = new)
+lines(exp(pred) - 1 ~ new$ba_tot_2006,
+      col = "#d95f02",
+      lty = 1)
+
+points(ba_inc_g_w_dead ~ ba_tot_2006, data = change_ba_prop,
+       pch = 22,
+       col = "#1b9e77",
+       bg = "#1b9e77")
+mod <- lm(log(ba_inc_g_w_dead + 1) ~ log(ba_tot_2006), data = change_ba_prop)
+pred <- predict(mod, newdata = new)
+lines(exp(pred) - 1 ~ new$ba_tot_2006,
+      col = "#1b9e77",
+      lty = 1)
+
+axis(side = 1, at = pretty(change_ba$ba_tot_2006), labels = pretty(change_ba$ba_tot_2006)*10)
+axis(side = 2, at = pretty(c(-0.7, 1.8)), labels = pretty(c(-0.7, 1.8))*100)
+
+mtext(side = 1, line = 2.9, text = expression(paste("Original basal area (m"^2, " ha"^-1, ")")),
+      cex = 1.3)
+
+
+text(x = 0.5, y = 1.67, labels = "(c)", cex = 1.2)
+
+dev.off()
+
+
+#  
+# #combined into one figure
+# png(filename="./plots/Figure 1 change in basal area.png", 
+#     type = "cairo",
+#     antialias = "gray",
+#     # compression = "lzw",
+#     units="in", 
+#     width = 4, 
+#     height=3, 
+#     pointsize=7, 
+#     res=600)
+# 
+# par(mar = c(5,5,1,1),
+#     oma = c(1,1,0,0))
+# 
+# new <- data.frame(BA_total = seq(0.5, 2.5, length.out = 100))
+# 
+# plot(NA,
+#      ylim = c(-0.1, 1.2),
+#      xlim = c(0.4, 2.6),
+#      xaxt = "n",
+#      yaxt = "n",
+#      xlab = expression(paste("Original basal area (m"^2, " ha"^-1, ")")),
+#      ylab = expression(paste("Change in basal area (m"^2, " ha"^-1, ")")),
+#      cex.lab = 1.2)
+# 
+# abline(h = 0)
+# 
+# points(ba_inc_s ~ ba_tot_2006, data = change_ba, 
+#        pch = 21,
+#        col = "#d95f02",
+#        bg = "#d95f02")
+# points(ba_inc_s_w_dead ~ ba_tot_2006, data = change_ba,
+#        pch = 21,
+#        col = "#d95f02")
+# segments(x0 = change_ba$ba_tot_2006, x1 = change_ba$ba_tot_2006,
+#          y0 = change_ba$ba_inc_s,
+#          y1 = change_ba$ba_inc_s_w_dead,
+#          col = "#d95f02")
+# abline(coef(lm(ba_inc_s ~ ba_tot_2006, data = change_ba)),
+#        col = "#d95f02",
+#        lty = 1)
+# abline(coef(lm(ba_inc_s_w_dead ~ ba_tot_2006, data = change_ba)),
+#        col = "#d95f02",
+#        lty = 2)
+# 
+# points(ba_inc_g ~ ba_tot_2006, data = change_ba, 
+#        pch = 22,
+#        col = "#1b9e77",
+#        bg = "#1b9e77")
+# points(ba_inc_g_w_dead ~ ba_tot_2006, data = change_ba,
+#        pch = 22,
+#        col = "#1b9e77")
+# segments(x0 = change_ba$ba_tot_2006, x1 = change_ba$ba_tot_2006,
+#          y0 = change_ba$ba_inc_g,
+#          y1 = change_ba$ba_inc_g_w_dead,
+#          col = "#1b9e77")
+# 
+# abline(coef(lm(ba_inc_g ~ ba_tot_2006, data = change_ba)),
+#        col = "#1b9e77",
+#        lty = 1)
+# abline(coef(lm(ba_inc_g_w_dead ~ ba_tot_2006, data = change_ba)),
+#        col = "#1b9e77",
+#        lty = 2)
+# 
+# legend(x = .5, y = 1.2, legend = c("Savanna", "Savanna + Dead", "Forest", "Forest + Dead"),
+#        pch = c(16, 21, 15, 22),
+#        col =  c("#d95f02","#d95f02","#1b9e77","#1b9e77"),
+#        cex = 0.9)
+# 
+# axis(side = 1, at = pretty(change_ba$ba_tot_2006), labels = pretty(change_ba$ba_tot_2006)*10)
+# axis(side = 2, at = pretty(c(-0.1, 1.2)), labels = pretty(c(-0.1, 1.2))*10)
+# 
+# dev.off()
+# 
+# curve <- curvefit(change_2006$BA_total, I((change_2016$BA_g - change_2006$BA_g)/change_2006$BA_g), y.max = NULL, extrapol = NULL, 
+#                   plot.curves = FALSE, print.results = FALSE)
+
+# #------------------------------------------------------------------------------
+# # Leaf area increment by FT
+# #------------------------------------------------------------------------------
+# 
+# la_mod <- readRDS("./diam_fg_lm.RDS")
+# summary(la_mod)
+# 
+# all_data$la_2006 <- predict(la_mod, newdata = list(FG = all_data$FG, D30_eff = all_data$dg.2006.cm))
+# all_data$la_2011 <- predict(la_mod, newdata = list(FG = all_data$FG, D30_eff = all_data$dg.2011.cm))
+# all_data$la_2016 <- predict(la_mod, newdata = list(FG = all_data$FG, D30_eff = all_data$dg.2016.cm))
+# all_data$delta_la <- exp(all_data$la_2016) - exp(all_data$la_2006)
+# all_data$delta_la <- all_data$delta_la*10
+# 
+# delta_la_plot <- aggregate(all_data$delta_la, by = list(all_data$FG, all_data$Plot), FUN = function(x){sum(x, na.rm = TRUE)})[-61, ]
+# names(delta_la_plot)[2] <- "Plot"
+# delta_la_plot <- join(delta_la_plot, plot_data[, c("Plot", "TBA.2011.m2.ha.1")], by = c("Plot"))
+# 
+# # plot(NA, 
+# #      xlim = c(5, 27),
+# #      ylim = c(0, 800),
+# #      ylab = "LA Increment",
+# #      xlab = "Stand BA")
+# # points(x ~ TBA.2011.m2.ha.1, data = delta_la_plot[delta_la_plot$Group.1 == "F", ], col = "#1b9e77")
+# # points(x ~ TBA.2011.m2.ha.1, data = delta_la_plot[delta_la_plot$Group.1 == "S", ], col = "#d95f02")
+# 
+# ggplot(data = delta_la_plot, aes(x = TBA.2011.m2.ha.1, y = x)) +
+#   geom_hline(yintercept=0) + 
+#   geom_point(aes(color = Group.1)) +
+#   # geom_line(aes(color = Group.1)) + 
+#   geom_smooth(aes(color = Group.1)) +
+#   scale_color_manual(values=c("#1b9e77", "#d95f02")) + 
+#   xlab(expression(paste("Stand basal area (m"^2, " ha"^-1, ")"))) + 
+#   ylab(expression(paste("Change in leaf area (m"^2, " ha"^-1, ")"))) + 
+#   theme(legend.position = "none")
+# 
