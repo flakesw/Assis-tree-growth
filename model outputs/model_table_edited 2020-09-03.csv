@@ -1,0 +1,16 @@
+model_number,desc,n_params,AICc,R2m,R2c
+1,Random intercept,3,7457.32,0.000,0.276
+2,Diameter only,4,7460.41,0.002,0.270
+3,Soils PCs 1 and 2,5,7377.10,0.033,0.360
+4,Soil PC1 only,4,7374.82,0.031,0.350
+5,PC1 quadratic,5,7345.77,0.040,0.365
+6,PC1 quadratic + Diam,6,7333.32,0.050,0.366
+7,PC1 quadratic + Diam + FT,7,7329.44,0.050,0.359
+8,PC1 quadratic + Diam + FT*symmetric competition (BA),9,7227.75,0.113,0.431
+9,PC1 quadratic + Diam + FT*symmetric competition  (Canopy cover),9,7322.35,0.063,0.374
+10,PC1 quadratic + Diam + FT*asymmetric competition (BA above2006),9,7053.85,0.171,0.456
+11,Model 10 with different size-growth slopes by FT,10,7058.23,0.171,0.458
+12,Model 10 without quadratic term for PC1,8,6889.80,0.227,0.490
+13,PC1 quadratic + Diam + FT*asymmetric competition (BA above2011),9,6869.17,0.233,0.488
+14,Model 13 with different size-growth slopes for FT,10,6872.89,0.232,0.490
+15,Model 13 without quadratic term for PC1,8,6889.80,0.227,0.490
