@@ -1,0 +1,85 @@
+"","Code","rel_growth","Species..names.not.updated.","Family","C.Cerrado..G.generalist.","Shade.Tolerance","Freq"
+"1","MYDE",0.256835490405416,"Myrciaria delicatula (DC.) O. Berg","MYRTACEAE","G","T",1
+"2","DIHI",0.317006678683855,"Diospyros hispida A. DC.","EBENACEAE","C","I",3
+"3","MABR",0.340095487773456,"Machaerium brasiliense Vogel","FABACEAE","G","T",5
+"4","ACSU",0.384854008061106,"Acosmium subelegans (Mohlenbr.) Yakovlev","FABACEAE","C","I",24
+"5","MYGU",0.420335925735688,"Myrcia guianensis (Aubl.) DC.","MYRTACEAE","G","T",28
+"6","TAOC",0.435464474487097,"Tabebuia ochracea (Cham.) Standl","BIGNONIACEAE","G","I",3
+"7","ASTO",0.483581449783398,"Aspidosperma tomentosum Mart.","APOCYNACEAE","C","I",2
+"8","MARO",0.510060782510984,"Maytenus robusta Reissek","CELASTRACEAE","G","T",3
+"9","MYLI",0.536322775240603,"Myrcia lingua (O. Berg) Mattos & D. Legrand","MYRTACEAE","C","I",8
+"10","LAPA",0.582940060729424,"Lafoensia pacari A.St.-Hil.","LYTHRACEAE","G","T",3
+"11","TEGL",0.594016308347045,"Terminalia glabrescens Mart.","COMBRETACEAE","G","I",23
+"12","RAFE",0.600926868927431,"Rapanea ferruginea (Ruiz & Pav.) Mez","MYRSINACEAE","G","I",9
+"13","CABR",0.607040957016164,"Caryocar brasiliense Cambess.","CARYOCARACEAE","C","I",3
+"14","QUCO",0.613754504981314,"Qualea cordata (Mart.) Spreng.","VOCHYSIACEAE","C","I",67
+"15","ERGR",0.704040931876872,"Eriotheca gracilipes (K.Schum.) A.Robyns","BOMBACACEAE","C","I",56
+"16","PLEL",0.720700537048033,"Platypodium elegans Vogel","FABACEAE","G","I",9
+"17","MYLA",0.753461215062933,"Myrcia lasiantha DC.","MYRTACEAE","C","I",1
+"18","COLA",0.779002856628122,"Copaifera langsdorffii Desf.","FABACEAE","G","T",408
+"19","COSU",0.780289503348269,"Connarus suberosus Planch var. suberosus","CONNARACEAE","C","I",1
+"20","OUSP",0.795794906789775,"Ouratea spectabilis (Mart. ex Engl.) Engl.","OCHNACEAE","C","I",12
+"21","EUPL",0.827434944579467,"Eugenia pluriflora DC.","MYRTACEAE","G","T",5
+"22","MYMU",0.833132141344245,"Myrcia multiflora (Lam.) DC.","MYRTACEAE","G","T",59
+"23","OCCO",0.837159773340016,"Ocotea corymbosa (Meisn.) Mez.","LAURACEAE","G","T",309
+"24","COGR",0.871784176024167,"Couepia grandiflora (Mart. & Zucc.) Benth. ex Hook. f.","FABACEAE","G","T",1
+"25","QUMU",0.88214513124797,"Qualea multiflora Mart.","VOCHYSIACEAE","C","I",3
+"26","MYVE",0.883814761909301,"Myrcia venulosa DC.","MYRTACEAE","G","T",12
+"27","BOVI",0.893225992927271,"Bowdichia virgilioides Kunth","FABACEAE","C","I",5
+"28","ALTR",0.89790533446572,"Alchornea triplinervia (Spreng.) Müll. Arg.","EUPHORBIACEAE","G","T",1
+"29","AUPO",0.900264176213757,"Austroplenckia populnea (Reissek) Lundell","CELASTRACEAE","C","I",3
+"30","GOPO",0.900473756675911,"Gochnatia polymorpha (Less.) Cabrera","ASTERACEAE","G","I",58
+"31","MAEL",0.902872762782548,"Matayba elaeagnoides Radlk","SAPINDACEAE","G","T",1
+"32","CRFL",0.904311044750575,"Croton floribundus Spreng.","EUPHORBIACEAE","G","I",2
+"33","OCVE",0.911231081733751,"Ocotea velutina (Nees) Rohwer","LAURACEAE","G","T",2
+"34","MYBE",0.914220066282749,"Myrcia bella Cambess","MYRTACEAE","C","I",15
+"35","EUAU",0.945867439030474,"Eugenia aurata O.Berg","MYRTACEAE","C","I",5
+"36","ANAN",0.955924491620868,"Andira anthelmia (Vell.) J.F. Macbr","FABACEAE","C","I",3
+"37","GUOP",0.97401463078262,"Guapira opposita (Vell.) Reitz","NYCTAGINACEAE","G","T",1
+"38","PRHE",0.97444084625033,"Protium heptaphyllum (Aubl.) Marchand","BURSERACEAE","G","T",146
+"39","DAFA",0.981587562807776,"Daphnopsis fasciculata (Meisn.) Nevling","THYMELAEACEAE","G","T",1
+"40","QUGR",0.984979221003846,"Qualea grandiflora Mart.","VOCHYSIACEAE","C","I",30
+"41","SCPA",1.02484596507374,"Sclerolobium paniculatum Vogel","FABACEAE","G","I",4
+"42","STOB",1.03681913340874,"Stryphnodendron obovatum Benth.","FABACEAE","C","I",76
+"43","RAUM",1.04684679249342,"Rapanea umbellata (Mart.) Mez.","MYRSINACEAE","G","T",30
+"44","PEOB",1.05183472920852,"Pera obovata (Klotzsch) Baill.","EUPHORBIACEAE","G","T",61
+"45","KICO",1.06315123116025,"Kielmeyera coriacea Mart. & Zucc.","CLUSIACEAE","C","I",1
+"46","ANCR",1.07651085436887,"Annona crassiflora Mart.","ANNONACEAE","C","I",22
+"47","MAAC",1.07691532221254,"Machaerium acutifolium Vogel","FABACEAE","C","I",73
+"48","LIHU",1.07957614963475,"Licania humilis Cham. & Schltdl","CHRYSOBALANACEAE","C","I",1
+"49","PIRO",1.08081452372568,"Piptocarpha rotundifolia (Less.) Baker","ASTERACEAE","C","I",2
+"50","PSPO",1.0843333156347,"Psidium pohlianum","MYRTACEAE","C","I",1
+"51","ERSU",1.08450007424274,"Erythroxylum suberosum A.St.-Hil.","ERYTHROXYLACEAE","C","I",2
+"52","EULI",1.0872796516028,"Eugenia livida O. Berg","MYRTACEAE","C","I",3
+"53","BYLA",1.09988196381349,"Byrsonima laxiflora Griseb. ","MALPIGHIACEAE","G","T",45
+"54","BYBA",1.15066494376571,"Byrsonima basiloba A.Juss.","MALPIGHIACEAE","C","I",2
+"55","SYRO",1.16238719613864,"Syagrus romanzoffiana (Cham.) Glassman","ARECACEAE","G","T",10
+"56","ANCO",1.19635375125647,"Annona coriacea Mart.","ANNONACEAE","C","I",1
+"57","LUGR",1.19922172630695,"Luehea grandiflora Mart.","TILIACEAE","G","T",1
+"58","PLRE",1.28020668510041,"Plathymenia reticulata Benth.","FABACEAE","C","I",5
+"59","PEWI",1.28883173190103,"Persea wildenovii Kosterm.","LAURACEAE","G","T",23
+"60","ILPA",1.32425565369011,"Ilex paraguariensis A. St.-Hil.","AQUIFOLIACEAE","G","T",2
+"61","XYAR",1.38856361395262,"Xylopia aromatica (Lam.) Mart.","ANNONACEAE","C","I",91
+"62","MAFI",1.39091270900344,"Mabea fistulifera Mart.","EUPHORBIACEAE","G","T",62
+"63","FAMO",1.39957685097524,"Faramea montevidensis (Cham. & Schltdl) DC. ","RUBIACEAE","G","T",140
+"64","TAAU",1.41768190298306,"Tabebuia aurea (Silva Manso) Benth & Hook.f. ex S.Moore","BIGNONIACEAE","C","I",1
+"65","TAGU",1.43200600096775,"Tapirira guianensis Aubl.","ANACARDIACEAE","G","T",31
+"66","MISE",1.43945955834445,"Miconia sellowiana Cogn.","MELASTOMATACEAE","G","T",1
+"67","ANFA",1.44629488867413,"Anadenanthera falcata (Benth.) Speg.","FABACEAE","C","I",67
+"68","NECU",1.45893958541754,"Nectandra cuspidata Nees & Mart.","LAURACEAE","G","T",66
+"69","NELA",1.46360559198194,"Nectandra lanceolata Nees","LAURACEAE","G","T",1
+"70","DIMO",1.48772947602162,"Dimorphandra mollis Benth.","FABACEAE","C","I",24
+"71","SYMO",1.48877671465858,"Symplocos mosenii Brand","SYMPLOCACEAE","G","T",2
+"72","AMIN",1.5550721001297,"Amaioua intermedia Mart.","RUBIACEAE","G","T",55
+"73","VOTU",1.56579281438104,"Vochysia tucanorum Mart.","VOCHYSIACEAE","G","I",350
+"74","GOLI",1.57972708167455,"Gomidesia lindeniana","MYRTACEAE","G","T",2
+"75","GUNO",1.58952655181912,"Guapira noxia (Netto) Lundell","NYCTAGINACEAE","C","I",1
+"76","POLA",1.64813002900531,"Pouteria laurifolia (Gomes) Radlk","SAPOTACEAE","G","T",26
+"77","STFE",1.79400888291297,"Styrax ferrugineus Ness & Mart.","STYRACACEAE","C","I",1
+"78","MILI",1.87055253133952,"Miconia ligustroides (DC.) Naudin","MELASTOMATACEAE","C","T",5
+"79","MYFA",1.88563446510716,"Myrcia fallax (Rich.) DC.","MYRTACEAE","G","T",4
+"80","PSLA",1.94808505410213,"Pseudolmedia laevigata Trécul","MORACEAE","G","T",16
+"81","SIGU",1.99817843185303,"Siparuna guianensis Aubl.","MONIMIACEAE","G","T",47
+"82","PORA",2.14144296827439,"Pouteria ramiflora (Mart.) Radlk.","SAPOTACEAE","C","I",6
+"83","MAGU",2.40292756517686,"Maprounea guianensis Aubl.","EUPHORBIACEAE","G","T",17
+"84","STPO",2.74276966235612,"Styrax pohlii A. DC.","STYRACACEAE","C","I",2
