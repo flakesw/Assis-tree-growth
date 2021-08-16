@@ -1,0 +1,104 @@
+Species,Family,Savanna/Generalist,rel_growth_06,rel_growth_11,Freq
+Tabebuia ochracea (Cham.) Standl,BIGNONIACEAE,G,0.72,0.79,36
+Myrciaria delicatula (DC.) O. Berg,MYRTACEAE,G,0.82,0.76,7
+Acosmium subelegans (Mohlenbr.) Yakovlev,FABACEAE,C,0.85,0.85,47
+Aspidosperma tomentosum Mart.,APOCYNACEAE,C,0.88,0.91,4
+Caryocar brasiliense Cambess.,CARYOCARACEAE,C,0.89,0.92,8
+Qualea cordata (Mart.) Spreng.,VOCHYSIACEAE,C,0.89,0.94,113
+Lafoensia pacari A.St.-Hil.,LYTHRACEAE,G,0.89,0.90,5
+Eriotheca gracilipes (K.Schum.) A.Robyns,BOMBACACEAE,C,0.89,0.88,116
+Machaerium brasiliense Vogel,FABACEAE,G,0.89,0.88,17
+Myrcia lingua (O. Berg) Mattos & D. Legrand,MYRTACEAE,C,0.90,0.88,17
+Casearia lasiophylla Eichler,FLACOURTIACEAE,G,0.90,0.90,1
+Myrcia guianensis (Aubl.) DC.,MYRTACEAE,G,0.91,0.86,80
+Platypodium elegans Vogel,FABACEAE,G,0.91,0.88,47
+Psidium pohlianum,MYRTACEAE,C,0.92,0.88,5
+Diospyros hispida A. DC.,EBENACEAE,C,0.92,0.88,9
+Prunus myrtifolia (L.) Urb.,ROSACEAE,G,0.92,NA,5
+Ocotea corymbosa (Meisn.) Mez.,LAURACEAE,G,0.92,0.94,738
+Piptocarpha rotundifolia (Less.) Baker,ASTERACEAE,C,0.92,0.92,11
+Myrcia bella Cambess,MYRTACEAE,C,0.93,1.00,43
+Gochnatia polymorpha (Less.) Cabrera,ASTERACEAE,G,0.93,0.96,101
+Rapanea ferruginea (Ruiz & Pav.) Mez,MYRSINACEAE,G,0.93,0.93,28
+Ouratea spectabilis (Mart. ex Engl.) Engl.,OCHNACEAE,C,0.93,0.98,32
+Myrcia prunifolia DC.,MYRTACEAE,G,0.93,NA,1
+Austroplenckia populnea (Reissek) Lundell,CELASTRACEAE,C,0.93,1.02,7
+Eugenia pluriflora DC.,MYRTACEAE,G,0.94,0.93,13
+Terminalia glabrescens Mart.,COMBRETACEAE,G,0.94,0.91,37
+Ocotea velutina (Nees) Rohwer,LAURACEAE,G,0.95,0.99,5
+Eugenia aurata O.Berg,MYRTACEAE,C,0.95,0.87,14
+Connarus suberosus Planch var. suberosus,CONNARACEAE,C,0.95,0.94,1
+Myrcia venulosa DC.,MYRTACEAE,G,0.96,0.89,36
+Copaifera langsdorffii Desf.,FABACEAE,G,0.96,0.92,570
+Myrcia multiflora (Lam.) DC.,MYRTACEAE,G,0.96,0.96,117
+Styrax camporum Pohl,STYRACACEAE,C,0.96,NA,4
+Protium heptaphyllum (Aubl.) Marchand,BURSERACEAE,G,0.96,0.96,211
+Matayba elaeagnoides Radlk,SAPINDACEAE,G,0.96,0.95,6
+Bowdichia virgilioides Kunth,FABACEAE,C,0.96,0.93,6
+Myrcia lasiantha DC.,MYRTACEAE,C,0.96,1.00,4
+Couepia grandiflora (Mart. & Zucc.) Benth. ex Hook. f.,FABACEAE,G,0.97,0.96,2
+Gochnatia barrosii Cabrera,ASTERACEAE,C,0.97,NA,1
+Alchornea triplinervia (Spreng.) Müll. Arg.,EUPHORBIACEAE,G,0.97,0.98,2
+Clethra scabra Pers.,CLETHRACEAE,G,0.98,NA,2
+Annona crassiflora Mart.,ANNONACEAE,C,0.98,0.98,34
+Roupala montana Aubl.,PROTEACEAE,C,0.99,NA,3
+Maytenus robusta Reissek,CELASTRACEAE,G,0.99,0.96,4
+Rapanea umbellata (Mart.) Mez.,MYRSINACEAE,G,0.99,1.05,172
+Guapira opposita (Vell.) Reitz,NYCTAGINACEAE,G,0.99,0.96,1
+Gomidesia lindeniana,MYRTACEAE,G,1.00,1.08,6
+Licania humilis Cham. & Schltdl,CHRYSOBALANACEAE,C,1.00,0.99,1
+Kielmeyera coriacea Mart. & Zucc.,CLUSIACEAE,C,1.00,0.94,1
+Andira anthelmia (Vell.) J.F. Macbr,FABACEAE,C,1.01,1.01,3
+Eugenia livida O. Berg,MYRTACEAE,C,1.01,0.93,3
+Annona coriacea Mart.,ANNONACEAE,C,1.01,1.02,1
+Persea wildenovii Kosterm.,LAURACEAE,G,1.01,1.19,39
+Qualea multiflora Mart.,VOCHYSIACEAE,C,1.01,0.96,5
+Byrsonima basiloba A.Juss.,MALPIGHIACEAE,C,1.02,1.00,3
+Pseudolmedia laevigata Trécul,MORACEAE,G,1.02,1.12,31
+Luehea grandiflora Mart.,TILIACEAE,G,1.02,0.99,2
+Erythroxylum suberosum A.St.-Hil.,ERYTHROXYLACEAE,C,1.03,0.92,4
+Croton floribundus Spreng.,EUPHORBIACEAE,G,1.03,0.92,2
+Machaerium acutifolium Vogel,FABACEAE,C,1.03,1.01,181
+Tabebuia aurea (Silva Manso) Benth & Hook.f. ex S.Moore,BIGNONIACEAE,C,1.03,1.17,1
+Daphnopsis fasciculata (Meisn.) Nevling,THYMELAEACEAE,G,1.03,0.96,21
+Qualea grandiflora Mart.,VOCHYSIACEAE,C,1.03,1.02,48
+Stryphnodendron obovatum Benth.,FABACEAE,C,1.03,0.92,217
+Nectandra cuspidata Nees & Mart.,LAURACEAE,G,1.04,1.15,107
+Ilex paraguariensis A. St.-Hil.,AQUIFOLIACEAE,G,1.04,1.00,2
+Syagrus romanzoffiana (Cham.) Glassman,ARECACEAE,G,1.05,0.97,14
+Faramea montevidensis (Cham. & Schltdl) DC. ,RUBIACEAE,G,1.05,0.98,186
+Pera obovata (Klotzsch) Baill.,EUPHORBIACEAE,G,1.06,1.03,124
+Xylopia aromatica (Lam.) Mart.,ANNONACEAE,C,1.06,1.02,419
+Mabea fistulifera Mart.,EUPHORBIACEAE,G,1.07,1.04,71
+Amaioua intermedia Mart.,RUBIACEAE,G,1.08,1.01,86
+Byrsonima laxiflora Griseb. ,MALPIGHIACEAE,G,1.08,1.05,88
+Plathymenia reticulata Benth.,FABACEAE,C,1.08,1.03,12
+Pouteria laurifolia (Gomes) Radlk,SAPOTACEAE,G,1.09,1.06,33
+Miconia sellowiana Cogn.,MELASTOMATACEAE,G,1.09,1.08,2
+Anadenanthera falcata (Benth.) Speg.,FABACEAE,C,1.09,1.11,108
+Siparuna guianensis Aubl.,MONIMIACEAE,G,1.10,0.98,215
+Byrsonima intermedia A.Juss.,MALPIGHIACEAE,C,1.12,NA,1
+Myrcia fallax (Rich.) DC.,MYRTACEAE,G,1.12,1.17,12
+Styrax pohlii A. DC.,STYRACACEAE,C,1.14,2.15,3
+Miconia ligustroides (DC.) Naudin,MELASTOMATACEAE,C,1.14,1.13,17
+Nectandra lanceolata Nees,LAURACEAE,G,1.14,1.13,1
+Tapirira guianensis Aubl.,ANACARDIACEAE,G,1.15,1.19,125
+Guapira noxia (Netto) Lundell,NYCTAGINACEAE,C,1.15,0.95,2
+Dimorphandra mollis Benth.,FABACEAE,C,1.16,0.97,48
+Symplocos mosenii Brand,SYMPLOCACEAE,G,1.16,1.39,8
+Styrax ferrugineus Ness & Mart.,STYRACACEAE,C,1.17,1.22,3
+Vochysia tucanorum Mart.,VOCHYSIACEAE,G,1.18,1.10,844
+Maprounea guianensis Aubl.,EUPHORBIACEAE,G,1.20,1.23,58
+Sclerolobium paniculatum Vogel,FABACEAE,G,1.22,0.95,5
+Pouteria ramiflora (Mart.) Radlk.,SAPOTACEAE,C,1.24,1.17,8
+Byrsonima coriacea (Sw.) DC. ,MALPIGHIACEAE,C,NA,1.09,6
+Erythroxylum tortuosum Mart.,ERYTHROXYLACEAE,C,NA,1.00,6
+Eugenia punicifolia,MYRTACEAE,G,NA,0.96,1
+Ficus guaranitica Chodat,MORACEAE,G,NA,1.10,1
+Lacistema hasslerianum Chodat.,LACISTEMATACEAE,G,NA,1.06,5
+Lithraea molleoides (Vell.) Engl.,ANACARDIACEAE,G,NA,0.95,2
+Miconia albicans (Sw.) Triana,MELASTOMATACEAE,C,NA,1.11,16
+Piptocarpha axillaris (Less.) Baker,ASTERACEAE,G,NA,1.17,4
+Rapanea gardneriana Mez.,MYRSINACEAE,G,NA,1.03,1
+Symplocos pubescens Klotz.,SYMPLOCOCEAE,C,NA,0.98,2
+Tibouchina stenocarpa (DC.) Cogn.,MELASTOMATACEAE,G,NA,0.99,2

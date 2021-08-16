@@ -1287,6 +1287,12 @@ change_2006 <- data.frame(Plot = unique(tree_data$Plot),
                      )
 change_2011 <- change_2006
 change_2016 <- change_2006
+change_live <- data.frame(Plot = unique(tree_data$Plot),
+                          s_2016 = numeric(length(unique(tree_data$Plot))),
+                          s_2006 = numeric(length(unique(tree_data$Plot))),
+                          g_2016 = numeric(length(unique(tree_data$Plot))),
+                          g_2006 = numeric(length(unique(tree_data$Plot)))
+                          )
 
 
 #sum the basal area by each functional type
@@ -1312,21 +1318,32 @@ for(plot in unique(tree_data$Plot)){
   change_2016[change_2016$Plot == plot, ]$BA_s_died <- sum((((temp[temp$C.Cerrado..G.generalist. == "C" & temp$Died2016 == "y", "dg.2011.cm"]/2)^2)*pi), na.rm = TRUE)/10000
   change_2016[change_2016$Plot == plot, ]$BA_g_died <- sum((((temp[temp$C.Cerrado..G.generalist. == "G"& temp$Died2016 == "y", "dg.2011.cm"]/2)^2)*pi), na.rm = TRUE)/10000
   
+  change_live[change_live$Plot == plot, ]$s_2016 <- sum((((temp[temp$C.Cerrado..G.generalist. == "C" & temp$Died2016 != "y" & temp$Died2011 != "y", 
+                                     "dg.2016.cm"]/2)^2)*pi), na.rm = TRUE)/10000
+  change_live[change_live$Plot == plot, ]$g_2016 <- sum((((temp[temp$C.Cerrado..G.generalist. == "G" & temp$Died2016 != "y" & temp$Died2011 != "y", 
+                                     "dg.2016.cm"]/2)^2)*pi), na.rm = TRUE)/10000
+  change_live[change_live$Plot == plot, ]$s_2006 <- sum((((temp[temp$C.Cerrado..G.generalist. == "C" & temp$Died2016 != "y" & temp$Died2011 != "y", 
+                                          "dg.2006.cm"]/2)^2)*pi), na.rm = TRUE)/10000
+  change_live[change_live$Plot == plot, ]$g_2006 <- sum((((temp[temp$C.Cerrado..G.generalist. == "G" & temp$Died2016 != "y" & temp$Died2011 != "y", 
+                                         "dg.2006.cm"]/2)^2)*pi), na.rm = TRUE)/10000
+  
 }
 
 change_ba <- data.frame(Plot = change_2006$Plot,
                         ba_tot_2006 = change_2006$BA_total,
                         ba_inc_s = change_2016$BA_s - change_2006$BA_s,
                         ba_inc_g = change_2016$BA_g - change_2006$BA_g,
-                        ba_died_s = change_2011$BA_s_died + change_2016$BA_s_died,
-                        ba_died_g = change_2011$BA_g_died + change_2016$BA_g_died,
+                        ba_died_s = -(change_2011$BA_s_died + change_2016$BA_s_died),
+                        ba_died_g = -(change_2011$BA_g_died + change_2016$BA_g_died),
                         ba_inc_s_w_dead = change_2016$BA_s - change_2006$BA_s + change_2011$BA_s_died + change_2016$BA_s_died,
-                        ba_inc_g_w_dead = change_2016$BA_g - change_2006$BA_g + change_2011$BA_g_died + change_2016$BA_g_died
+                        ba_inc_g_w_dead = change_2016$BA_g - change_2006$BA_g + change_2011$BA_g_died + change_2016$BA_g_died,
+                        ba_live_s = change_live$s_2016 - change_live$s_2006,
+                        ba_live_g = change_live$g_2016 - change_live$g_2006
                         )
 
 change_ba_prop <- change_ba
-change_ba_prop[, c(3, 5, 7)] <- change_ba_prop[, c(3,5,7)]/change_2006$BA_s
-change_ba_prop[, c(4, 6, 8)] <- change_ba_prop[, c(4,6,8)]/change_2006$BA_g
+change_ba_prop[, c(3, 5, 7, 9)] <- change_ba_prop[, c(3,5,7,9)]/change_2006$BA_s
+change_ba_prop[, c(4, 6, 8, 10)] <- change_ba_prop[, c(4,6,8,10)]/change_2006$BA_g
 
 #make three-panel figure
 
@@ -1391,17 +1408,17 @@ legend(x = 0.5, y = -0.2, legend = c("Savanna species", "Generalist species"),
        col =  c("#d95f02","#1b9e77"),
        cex = 0.9)
 
-text(x = 0.5, y = 1.67, labels = "(a)", cex = 1.2)
+text(x = 0.4, y = 1.67, labels = "(a)", cex = 1.2)
 
 #just losses due to mortality
 
 plot(NA,
-     ylim = c(0, .8),
+     ylim = c(-.8, 0),
      xlim = c(0.4, 2.6),
      xaxt = "n",
      yaxt = "n",
      xlab = "",
-     ylab = expression(paste("Mortality basal area (%)")),
+     ylab = expression(paste("Basal area lost\nto mortality (%)")),
      cex.lab = 1.2)
 
 abline(h = 0)
@@ -1411,9 +1428,9 @@ points(ba_died_s ~ ba_tot_2006, data = change_ba_prop,
        col = "#d95f02",
        bg = "#d95f02")
 
-mod <- lm(log(ba_died_s + 1) ~ log(ba_tot_2006), data = change_ba_prop)
+mod <- lm(log(-ba_died_s + 1) ~ log(ba_tot_2006), data = change_ba_prop)
 pred <- predict(mod, newdata = new)
-lines(exp(pred) - 1 ~ new$ba_tot_2006,
+lines(-(exp(pred) - 1) ~ new$ba_tot_2006,
       col = "#d95f02",
       lty = 1)
 
@@ -1422,19 +1439,19 @@ points(ba_died_g ~ ba_tot_2006, data = change_ba_prop,
        pch = 22,
        col = "#1b9e77",
        bg = "#1b9e77")
-mod <- lm(log(ba_died_g + 1) ~ log(ba_tot_2006), data = change_ba_prop)
+mod <- lm(log(-ba_died_g + 1) ~ log(ba_tot_2006), data = change_ba_prop)
 pred <- predict(mod, newdata = new)
-lines(exp(pred) - 1 ~ new$ba_tot_2006,
+lines(-(exp(pred) - 1) ~ new$ba_tot_2006,
       col = "#1b9e77",
       lty = 1)
 
-axis(side = 2, at = pretty(c(0,0.8)), labels = pretty(c(0,0.8))*100)
+axis(side = 2, at = pretty(c(-.8, 0)), labels = pretty(c(-.8, 0))*100)
 axis(side = 1, at = pretty(change_ba$ba_tot_2006), labels = NA)
 
 
-text(x = 0.5, y = 0.75, labels = "(b)", cex = 1.2)
+text(x = 0.4, y = -.1, labels = "(b)", cex = 1.2)
 
-#with resurrected trees
+#without dead trees
 plot(NA,
      ylim = c(-0.7, 1.8),
      xlim = c(0.4, 2.6),
@@ -1446,21 +1463,21 @@ plot(NA,
 
 abline(h = 0)
 
-points(ba_inc_s_w_dead ~ ba_tot_2006, data = change_ba_prop,
+points(ba_live_s ~ ba_tot_2006, data = change_ba_prop,
        pch = 21,
        col = "#d95f02",
        bg = "#d95f02")
-mod <- lm(log(ba_inc_s_w_dead + 1) ~ log(ba_tot_2006), data = change_ba_prop)
+mod <- lm(log(ba_live_s + 1) ~ log(ba_tot_2006), data = change_ba_prop)
 pred <- predict(mod, newdata = new)
 lines(exp(pred) - 1 ~ new$ba_tot_2006,
       col = "#d95f02",
       lty = 1)
 
-points(ba_inc_g_w_dead ~ ba_tot_2006, data = change_ba_prop,
+points(ba_live_g ~ ba_tot_2006, data = change_ba_prop,
        pch = 22,
        col = "#1b9e77",
        bg = "#1b9e77")
-mod <- lm(log(ba_inc_g_w_dead + 1) ~ log(ba_tot_2006), data = change_ba_prop)
+mod <- lm(log(ba_live_g + 1) ~ log(ba_tot_2006), data = change_ba_prop)
 pred <- predict(mod, newdata = new)
 lines(exp(pred) - 1 ~ new$ba_tot_2006,
       col = "#1b9e77",
@@ -1473,7 +1490,7 @@ mtext(side = 1, line = 2.9, text = expression(paste("Original basal area (m"^2, 
       cex = 1.3)
 
 
-text(x = 0.5, y = 1.67, labels = "(c)", cex = 1.2)
+text(x = 0.4, y = 1.67, labels = "(c)", cex = 1.2)
 
 dev.off()
 
