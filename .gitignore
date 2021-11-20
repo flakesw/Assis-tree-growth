@@ -46,3 +46,7 @@ po/*~
 
 # output files
 plots/
+.RDataTmp
+.RData
+.Rhistory
+.Rproj.user/shared/notebooks/paths

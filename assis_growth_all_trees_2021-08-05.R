@@ -162,16 +162,12 @@ tree_data$Shade.Tolerance <- as.factor(tree_data$Shade.Tolerance)
 tree_data$C.Cerrado..G.generalist. <- as.factor(tree_data$C.Cerrado..G.generalist.)
 tree_data$H.2006 <- as.numeric(tree_data$H.2006)
 tree_data$H.2011..m. <- as.numeric(tree_data$H.2011..m.)
+tree_data$H.2016.m <- as.numeric(tree_data$H.2016.m)
 tree_data$G2006..m2. <- as.numeric(tree_data$G2006..m2.)
 tree_data$G2011..m2. <- as.numeric(tree_data$G2011..m2.)
 tree_data$dg.2006.cm <- as.numeric(tree_data$dg.2006.cm)
 tree_data$dg.2016.cm <- as.numeric(tree_data$dg.2016.cm)
 tree_data$dg.2011.cm <- as.numeric(tree_data$dg.2011.cm)
-
-# tree_data$bai <- tree_data$dg.2016.cm - tree_data$dg.2006.cm
-# plot_data$bai <- aggregate(tree_data$bai, by = list(tree_data$Plot),
-#                            FUN = function(x){sum(x, na.rm = TRUE)})
-
 
 # Calculate the one-sided competition index for 2006 and for 2011
 # this uses the entire dataset, not removing trees with negative growth 
@@ -230,25 +226,33 @@ for(i in 1:nrow(tree_data)){
   }
 }
 
+
+#calculate height growth for each interval
+tree_data$inc_06_11_ht <- NA
+tree_data$inc_11_16_ht <- NA
+tree_data$inc_06_16_ht <- NA
+for(i in 1:nrow(tree_data)){
+  row <- tree_data[i, ]
+  if(!is.na(row$Alive2006) & !is.na(row$Alive2011) & row$Alive2006 == "v" & row$Alive2011 == "v" ){
+    tree_data[i, "inc_06_11_ht"] <- (as.numeric(row$H.2011..m.) - as.numeric(row$H.2006))/5
+  }
+  if(!is.na(row$Alive2011) & !is.na(row$Alive2016) & row$Alive2011 == "v" & row$Alive2016 == "v" ){
+    tree_data[i, "inc_11_16_ht"] <- (as.numeric(row$H.2016.m) - as.numeric(row$H.2011..m.))/5
+  }
+  if(!is.na(row$Alive2006) & !is.na(row$Alive2016) & row$Alive2006 == "v" & row$Alive2016 == "v" ){
+    tree_data[i, "inc_06_16_ht"] <- (as.numeric(row$H.2016.m) - as.numeric(row$H.2006))/10
+  }
+}
+
 # first interval growth is higher than second interval or overall growth
 t.test(tree_data$inc_06_11, tree_data$inc_11_16)
 t.test(tree_data$inc_06_11, tree_data$inc_06_16)
 t.test(tree_data$inc_11_16, tree_data$inc_06_16)
 
 # make a new dataframe with clean data
-tree_data_clean <- tree_data[, c(2, 3, 5, 7, 8, 9, 10, 12, 49, 13, 14, 35, 25, 15, 45, 46, 47, 50:57)]
+tree_data_clean <- tree_data[, c(2, 3, 5, 7, 8, 9, 10, 12, 49, 13, 14, 35, 25, 15, 45, 46, 47, 50:60)]
 
-
-# t.test(tree_data[tree_data$Added == "2006", "dbh.annual.increment.cm._10.years"],
-#          tree_data[tree_data$Added == "2011", "dbh.annual.increment.cm._10.years"])
-# 
-# #remove negative growth
-# tree_data_pos <- subset(tree_data, dbh.annual.increment.cm._10.years > 0)
-# 
-# #only use trees which were present in 2006
-# tree_data_pos <- subset(tree_data_pos, dg.2006.cm > 0)
-
-
+#-------------------------------------------------------------------------------
 # PCA on soils
 
 #just data from 60 cm
@@ -396,33 +400,37 @@ dev.off()
 #----------------------------------------------------------------------
 # Model comparison for table 1
 #----------------------------------------------------------------------
-# just species
-mod1 <- expression(lmer(inc_06_11 ~ (1|Code), data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))) # just species and diameter
 
-mod2 <- expression(lmer(inc_06_11 ~ log(dg.2006.cm) + (1|Code), data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0)))
-  
+#----------------------------------------------------------------------
+# Model comparison for table 1
+#----------------------------------------------------------------------
+# just species
+mod1 <- expression(lmer(inc_06_11 ~ (1|Code) + (1|Plot), data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))) # just species and diameter
+
+mod2 <- expression(lmer(inc_06_11 ~ log(dg.2006.cm) + (1|Code) + (1|Plot), data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0)))
+
 # linear soils
 mod3 <- expression(lmer(inc_06_11 ~ scale(PC1) + scale(PC2) + 
-               (1|Code),
-             data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0)))
-  
+                          (1|Code) + (1|Plot),
+                        data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0)))
+
 # quadratic soils
 mod4 <- expression(lmer(inc_06_11 ~ poly(PC1,2)  +
-                          poly(PC2,2) +  (1|Code),
-             data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0)))
+                          poly(PC2,2) +  (1|Code) + (1|Plot),
+                        data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0)))
 
 # just size and competition
 mod5 <- expression((lmer(inc_06_11 ~ 
                            scale(log(dg.2006.cm)) +
                            scale(BA.above2006) +
-                           (1|Code),
+                           (1|Code) + (1|Plot),
                          data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))))
 
 # let FTs differ in competition susceptibility
 mod6 <- expression((lmer(inc_06_11 ~ 
                            scale(log(dg.2006.cm)) +
                            scale(BA.above2006) * C.Cerrado..G.generalist. +
-                           (1|Code),
+                           (1|Code) + (1|Plot),
                          data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))))
 
 # let FTs also differ in diameter-growth relationships
@@ -430,23 +438,23 @@ mod6 <- expression((lmer(inc_06_11 ~
 mod7 <- expression((lmer(inc_06_11 ~ 
                            scale(log(dg.2006.cm))* C.Cerrado..G.generalist. +
                            scale(BA.above2006) * C.Cerrado..G.generalist. +
-                           (1|Code),
+                           (1|Code) + (1|Plot),
                          data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))))
-  
+
 # add in PC1
 mod8 <- expression((lmer(inc_06_11 ~ 
                            scale(log(dg.2006.cm)) +
                            scale(BA.above2006) * C.Cerrado..G.generalist. +
                            poly(PC1, 2) + 
-                           (1|Code),
+                           (1|Code) + (1|Plot),
                          data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))))
 # add in linear PC2  
 mod9 <-  expression((lmer(inc_06_11 ~ 
-                 scale(log(dg.2006.cm)) +
-                 scale(BA.above2006) * C.Cerrado..G.generalist. +
-                 poly(PC1, 2) + PC2 +
-                 (1|Code),
-               data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))))
+                            scale(log(dg.2006.cm)) +
+                            scale(BA.above2006) * C.Cerrado..G.generalist. +
+                            poly(PC1, 2) + PC2 +
+                            (1|Code) + (1|Plot),
+                          data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))))
 
 #best model
 # quadratic PC2
@@ -454,20 +462,20 @@ mod10 <- expression((lmer(inc_06_11 ~
                             scale(log(dg.2006.cm)) +
                             scale(BA.above2006) * C.Cerrado..G.generalist. +
                             poly(PC1, 2) + poly(PC2, 2) +
-                            (1|Code),
+                            (1|Code) + (1|Plot),
                           data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))))
 
 mod11 <- expression((lmer(inc_06_11 ~ 
                             scale(log(dg.2006.cm)) +
                             scale(TBA.2006.m2ha.1) * C.Cerrado..G.generalist. +
                             poly(PC1, 2) + poly(PC2, 2) +
-                            (1|Code),
+                            (1|Code) + (1|Plot),
                           data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))))
 
 model_list <- c(paste0("mod", seq(1:11)))
 
 model_summary <- list(model_names = model_list,
-                            models_fit = lapply(model_list, FUN = function(x){eval(eval(str2expression(x)))}))
+                      models_fit = lapply(model_list, FUN = function(x){eval(eval(str2expression(x)))}))
 
 model_summary$n_params <- lapply(model_summary$models_fit, function(x){attributes(logLik(x))$df})
 model_summary$AICc <- lapply(model_summary$models_fit, function(x){AICc(x)})
@@ -487,32 +495,32 @@ write.csv(model_table, "./model outputs/model_table_06_11.csv")
 # redo for second time period
 
 # just species
-mod1 <- expression(lmer(inc_11_16 ~ (1|Code), data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))) # just species and diameter
+mod1 <- expression(lmer(inc_11_16 ~ (1|Code) + (1|Plot), data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))) # just species and diameter
 
-mod2 <- expression(lmer(inc_11_16 ~ log(dg.2011.cm) + (1|Code), data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0)))
+mod2 <- expression(lmer(inc_11_16 ~ log(dg.2011.cm) + (1|Code) + (1|Plot), data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0)))
 
 # linear soils
 mod3 <- expression(lmer(inc_11_16 ~ scale(PC1) + scale(PC2) + 
-                          (1|Code),
+                          (1|Code) + (1|Plot),
                         data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0)))
 
 # quadratic soils
 mod4 <- expression(lmer(inc_11_16 ~ poly(PC1,2)  +
-                          poly(PC2,2) +  (1|Code),
+                          poly(PC2,2) +  (1|Code) + (1|Plot),
                         data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0)))
 
 # just size and competition
 mod5 <- expression((lmer(inc_11_16 ~ 
                            scale(log(dg.2011.cm)) +
                            scale(BA.above2011) +
-                           (1|Code),
+                           (1|Code) + (1|Plot),
                          data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))))
 
 # let FTs differ in competition susceptibility
 mod6 <- expression((lmer(inc_11_16 ~ 
                            scale(log(dg.2011.cm)) +
                            scale(BA.above2011) * C.Cerrado..G.generalist. +
-                           (1|Code),
+                           (1|Code) + (1|Plot),
                          data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))))
 
 # let FTs also differ in diameter-growth relationships
@@ -520,7 +528,7 @@ mod6 <- expression((lmer(inc_11_16 ~
 mod7 <- expression((lmer(inc_11_16 ~ 
                            scale(log(dg.2011.cm))* C.Cerrado..G.generalist. +
                            scale(BA.above2011) * C.Cerrado..G.generalist. +
-                           (1|Code),
+                           (1|Code) + (1|Plot),
                          data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))))
 
 # add in PC1
@@ -528,14 +536,14 @@ mod8 <- expression((lmer(inc_11_16 ~
                            scale(log(dg.2011.cm)) +
                            scale(BA.above2011) * C.Cerrado..G.generalist. +
                            poly(PC1, 2) + 
-                           (1|Code),
+                           (1|Code) + (1|Plot),
                          data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))))
 # add in linear PC2  
 mod9 <-  expression((lmer(inc_11_16 ~ 
                             scale(log(dg.2011.cm)) +
                             scale(BA.above2011) * C.Cerrado..G.generalist. +
                             poly(PC1, 2) + PC2 +
-                            (1|Code),
+                            (1|Code) + (1|Plot),
                           data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))))
 
 #best model
@@ -544,14 +552,14 @@ mod10 <- expression((lmer(inc_11_16 ~
                             scale(log(dg.2011.cm)) +
                             scale(BA.above2011) * C.Cerrado..G.generalist. +
                             poly(PC1, 2) + poly(PC2, 2) +
-                            (1|Code),
+                            (1|Code) + (1|Plot),
                           data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))))
 
 mod11 <- expression((lmer(inc_11_16 ~ 
                             scale(log(dg.2011.cm)) +
                             scale(TBA.2011.m2.ha.1) * C.Cerrado..G.generalist. +
                             poly(PC1, 2) + poly(PC2, 2) +
-                            (1|Code),
+                            (1|Code) + (1|Plot),
                           data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))))
 
 model_list <- c(paste0("mod", seq(1:11)))
@@ -587,18 +595,19 @@ ft_ci_soils_06 <- lmer(inc_06_11 ~
                          scale(log(dg.2006.cm)) +
                          scale(BA.above2006) * C.Cerrado..G.generalist. +
                          poly(PC1, 2) + poly(PC2, 2) +
-                         (1|Code),
+                         (1|Code) + (1|Plot),
                        data = data_06)
 
 ft_ci_soils_11 <- lmer(inc_11_16 ~ 
                          scale(log(dg.2011.cm)) +
                          scale(BA.above2011) * C.Cerrado..G.generalist. +
                          poly(PC1, 2) + poly(PC2, 2) +
-                         (1|Code),
+                         (1|Code) + (1|Plot),
                        data = data_11)
 
 summary(ft_ci_soils_06)
 summary(ft_ci_soils_11)
+
 
 write.csv(summary(ft_ci_soils_06)$coef, "./model outputs/model_coefs_06.csv")
 write.csv(summary(ft_ci_soils_11)$coef, "./model outputs/model_coefs_11.csv")
@@ -2135,3 +2144,429 @@ mtext(side = 1, line = 2.9, text = expression(paste("Original basal area (m"^2, 
 text(x = 0.4, y = 1.67, labels = "(c)", cex = 1.2)
 
 dev.off()
+
+################################################################################
+# Model height growth
+################################################################################
+
+#----------------------------------------------------------------------
+# Model comparison for table 1
+# height
+#----------------------------------------------------------------------
+# just species
+mod1 <- expression(lmer(inc_06_11_ht ~ (1|Code) + (1|Plot), data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0))) # just species and diameter
+
+mod2 <- expression(lmer(inc_06_11_ht ~ log(dg.2006.cm) + (1|Code) + (1|Plot), data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0)))
+
+# linear soils
+mod3 <- expression(lmer(inc_06_11_ht ~ scale(PC1) + scale(PC2) + 
+                          (1|Code) + (1|Plot),
+                        data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0)))
+
+# quadratic soils
+mod4 <- expression(lmer(inc_06_11_ht ~ poly(PC1,2)  +
+                          poly(PC2,2) +  (1|Code) + (1|Plot),
+                        data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0)))
+
+# just size and competition
+mod5 <- expression((lmer(inc_06_11_ht ~ 
+                           scale(log(dg.2006.cm)) +
+                           scale(BA.above2006) +
+                           (1|Code) + (1|Plot),
+                         data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0))))
+
+# let FTs differ in competition susceptibility
+mod6 <- expression((lmer(inc_06_11_ht ~ 
+                           scale(log(dg.2006.cm)) +
+                           scale(BA.above2006) * C.Cerrado..G.generalist. +
+                           (1|Code) + (1|Plot),
+                         data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0))))
+
+# let FTs also differ in diameter-growth relationships
+# doesn't help AIC
+mod7 <- expression((lmer(inc_06_11_ht ~ 
+                           scale(log(dg.2006.cm))* C.Cerrado..G.generalist. +
+                           scale(BA.above2006) * C.Cerrado..G.generalist. +
+                           (1|Code) + (1|Plot),
+                         data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0))))
+
+# add in PC1
+mod8 <- expression((lmer(inc_06_11_ht ~ 
+                           scale(log(dg.2006.cm)) +
+                           scale(BA.above2006) * C.Cerrado..G.generalist. +
+                           poly(PC1, 2) + 
+                           (1|Code) + (1|Plot),
+                         data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0))))
+# add in linear PC2  
+mod9 <-  expression((lmer(inc_06_11_ht ~ 
+                            scale(log(dg.2006.cm)) +
+                            scale(BA.above2006) * C.Cerrado..G.generalist. +
+                            poly(PC1, 2) + PC2 +
+                            (1|Code) + (1|Plot),
+                          data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0))))
+
+#best model
+# quadratic PC2
+mod10 <- expression((lmer(inc_06_11_ht ~ 
+                            scale(log(dg.2006.cm)) +
+                            scale(BA.above2006) * C.Cerrado..G.generalist. +
+                            poly(PC1, 2) + poly(PC2, 2) +
+                            (1|Code) + (1|Plot),
+                          data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0))))
+
+mod11 <- expression((lmer(inc_06_11_ht ~ 
+                            scale(log(dg.2006.cm)) +
+                            scale(TBA.2006.m2ha.1) * C.Cerrado..G.generalist. +
+                            poly(PC1, 2) + poly(PC2, 2) +
+                            (1|Code) + (1|Plot),
+                          data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0))))
+
+model_list <- c(paste0("mod", seq(1:11)))
+
+model_summary <- list(model_names = model_list,
+                      models_fit = lapply(model_list, FUN = function(x){eval(eval(str2expression(x)))}))
+
+model_summary$n_params <- lapply(model_summary$models_fit, function(x){attributes(logLik(x))$df})
+model_summary$AICc <- lapply(model_summary$models_fit, function(x){AICc(x)})
+model_summary$R2m <- lapply(model_summary$models_fit, function(x){r.squaredGLMM(x)[1,1]})
+model_summary$R2c <- lapply(model_summary$models_fit, function(x){r.squaredGLMM(x)[1,2]})
+
+model_table <- data.frame(model_number = model_list,
+                          desc = NA,
+                          n_params = unlist(model_summary$n_params),
+                          AICc = unlist(model_summary$AICc),
+                          R2m = unlist(model_summary$R2m),
+                          R2c = unlist(model_summary$R2c))
+
+write.csv(model_table, "./model outputs/model_table_06_11_height.csv")
+
+#------------------------------------------------------------------------------
+# redo for second time period
+
+# just species
+mod1 <- expression(lmer(inc_11_16_ht ~ (1|Code) + (1|Plot), data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0))) # just species and diameter
+
+mod2 <- expression(lmer(inc_11_16_ht ~ log(dg.2011.cm) + (1|Code) + (1|Plot), data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0)))
+
+# linear soils
+mod3 <- expression(lmer(inc_11_16_ht ~ scale(PC1) + scale(PC2) + 
+                          (1|Code) + (1|Plot),
+                        data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0)))
+
+# quadratic soils
+mod4 <- expression(lmer(inc_11_16_ht ~ poly(PC1,2)  +
+                          poly(PC2,2) +  (1|Code) + (1|Plot),
+                        data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0)))
+
+# just size and competition
+mod5 <- expression((lmer(inc_11_16_ht ~ 
+                           scale(log(dg.2011.cm)) +
+                           scale(BA.above2011) +
+                           (1|Code) + (1|Plot),
+                         data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0))))
+
+# let FTs differ in competition susceptibility
+mod6 <- expression((lmer(inc_11_16_ht ~ 
+                           scale(log(dg.2011.cm)) +
+                           scale(BA.above2011) * C.Cerrado..G.generalist. +
+                           (1|Code) + (1|Plot),
+                         data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0))))
+
+# let FTs also differ in diameter-growth relationships
+# doesn't help AIC
+mod7 <- expression((lmer(inc_11_16_ht ~ 
+                           scale(log(dg.2011.cm))* C.Cerrado..G.generalist. +
+                           scale(BA.above2011) * C.Cerrado..G.generalist. +
+                           (1|Code) + (1|Plot),
+                         data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0))))
+
+# add in PC1
+mod8 <- expression((lmer(inc_11_16_ht ~ 
+                           scale(log(dg.2011.cm)) +
+                           scale(BA.above2011) * C.Cerrado..G.generalist. +
+                           poly(PC1, 2) + 
+                           (1|Code) + (1|Plot),
+                         data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0))))
+# add in linear PC2  
+mod9 <-  expression((lmer(inc_11_16_ht ~ 
+                            scale(log(dg.2011.cm)) +
+                            scale(BA.above2011) * C.Cerrado..G.generalist. +
+                            poly(PC1, 2) + PC2 +
+                            (1|Code) + (1|Plot),
+                          data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0))))
+
+#best model
+# quadratic PC2
+mod10 <- expression((lmer(inc_11_16_ht ~ 
+                            scale(log(dg.2011.cm)) +
+                            scale(BA.above2011) * C.Cerrado..G.generalist. +
+                            poly(PC1, 2) + poly(PC2, 2) +
+                            (1|Code) + (1|Plot),
+                          data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0))))
+
+mod11 <- expression((lmer(inc_11_16_ht ~ 
+                            scale(log(dg.2011.cm)) +
+                            scale(TBA.2011.m2.ha.1) * C.Cerrado..G.generalist. +
+                            poly(PC1, 2) + poly(PC2, 2) +
+                            (1|Code) + (1|Plot),
+                          data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0))))
+
+model_list <- c(paste0("mod", seq(1:11)))
+
+model_summary <- list(model_names = model_list,
+                      models_fit = lapply(model_list, FUN = function(x){eval(eval(str2expression(x)))}))
+
+model_summary$n_params <- lapply(model_summary$models_fit, function(x){attributes(logLik(x))$df})
+model_summary$AICc <- lapply(model_summary$models_fit, function(x){AICc(x)})
+model_summary$R2m <- lapply(model_summary$models_fit, function(x){r.squaredGLMM(x)[1,1]})
+model_summary$R2c <- lapply(model_summary$models_fit, function(x){r.squaredGLMM(x)[1,2]})
+
+model_table <- data.frame(model_number = model_list,
+                          desc = NA,
+                          n_params = unlist(model_summary$n_params),
+                          AICc = unlist(model_summary$AICc),
+                          R2m = unlist(model_summary$R2m),
+                          R2c = unlist(model_summary$R2c))
+
+write.csv(model_table, "./model outputs/model_table_11_16_height.csv")
+
+#----------------------------------------------------------------------
+# Full model: FT x CI interaction with soils
+# = model 10 from above
+
+options(na.action = na.omit)
+data_06 <- subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0)
+data_11 <- subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0)
+
+ft_ci_soils_06_ht <- lmer(inc_06_11_ht ~ 
+                            scale(H.2006) +
+                            scale(BA.above2006) * C.Cerrado..G.generalist. +
+                            # poly(PC1, 2) + poly(PC2, 2) +
+                            PC1 + PC2 + 
+                            (1|Code) + (1|Plot),
+                          data = data_06)
+
+ft_ci_soils_11_ht <- lmer(inc_11_16_ht ~ 
+                            scale(H.2011..m.) +
+                            scale(BA.above2011) * C.Cerrado..G.generalist. +
+                            # poly(PC1, 2) + poly(PC2, 2) +
+                            (1|Code) + (1|Plot),
+                          data = data_11)
+
+summary(ft_ci_soils_06_ht)
+summary(ft_ci_soils_11_ht)
+
+write.csv(summary(ft_ci_soils_06_ht)$coef, "./model outputs/model_coefs_06_ht.csv")
+write.csv(summary(ft_ci_soils_11_ht)$coef, "./model outputs/model_coefs_11_ht.csv")
+
+
+plot(residuals(ft_ci_soils_06_ht) ~ fitted(ft_ci_soils_06_ht))
+abline(h = 0)
+ggqqplot(residuals(ft_ci_soils_06_ht))
+plot(allEffects(ft_ci_soils_06_ht, partial.residuals = FALSE))
+plot(Effect(focal.predictors = c("BA.above2006", "C.Cerrado..G.generalist."),
+            mod = ft_ci_soils_06_ht))
+plot(Effect(focal.predictors = c("dg.2006.cm", "C.Cerrado..G.generalist."),
+            mod = ft_ci_soils_0_ht))
+plot(Effect(focal.predictors = c("PC1"),
+            mod = ft_ci_soils_06_ht))
+
+plot(residuals(ft_ci_soils_11_ht) ~ fitted(ft_ci_soils_11_ht))
+abline(h = 0)
+ggqqplot(residuals(ft_ci_soils_11_ht))
+plot(allEffects(ft_ci_soils_11_ht, partial.residuals = FALSE))
+plot(Effect(focal.predictors = c("BA.above2006", "C.Cerrado..G.generalist."), 
+            mod = ft_ci_soils_11_ht, transformation = list(link = log, inverse = exp)))
+plot(Effect(focal.predictors = c("dg.2006.cm", "C.Cerrado..G.generalist."), 
+            mod = ft_ci_soils_11_ht, transformation = list(link = log, inverse = exp)))
+plot(Effect(focal.predictors = c("PC1"), 
+            mod = ft_ci_soils_11_ht, transformation = list(link = log, inverse = exp)))
+
+#making sure everything converged okay; I think I stole this from Ben Bolker
+# derivs1 <- ft_ci_soils_06@optinfo$derivs
+# sc_grad1 <- with(derivs1,solve(Hessian,gradient))
+# max(abs(sc_grad1))
+# max(pmin(abs(sc_grad1),abs(derivs1$gradient)))
+# 
+# relgrad <- with(ft_ci_soils_06@optinfo$derivs,solve(Hessian,gradient))
+# max(abs(relgrad))
+
+# qqmath(ranef(ft_ci_soils_06, condVar = TRUE), strip = FALSE)$Code
+
+## Species growth rates (appendix table 1)
+ranef_sp_06 <- exp(ranef(ft_ci_soils_06_ht, condVar = TRUE)$Code)
+ranef_sp_11 <- exp(ranef(ft_ci_soils_11_ht, condVar = TRUE)$Code)
+ranef_sp_df_06 <- data.frame(rel_growth_06_ht = ranef_sp_06_ht$`(Intercept)`,
+                             Code = rownames(ranef_sp_06_ht))
+ranef_sp_df_11 <- data.frame(rel_growth_11_ht = ranef_sp_11_ht$`(Intercept)`,
+                             Code = rownames(ranef_sp_11_ht))
+
+ranef_sp_df_ht <- join(ranef_sp_df_06_ht, ranef_sp_df_11_ht, by = "Code", type = "full")
+
+ranef_sp_df_ht <- join(ranef_sp_df_ht, 
+                       tree_data[, c("Code",
+                                     "Species..names.not.updated.",
+                                     "Family",
+                                     "C.Cerrado..G.generalist.",
+                                     "Shade.Tolerance")],
+                       by = c("Code"),
+                       type = "left",
+                       match = "first")
+
+ranef_sp_df_ht <- ranef_sp_df_ht[order(ranef_sp_df_ht$rel_growth_06), ]
+
+sp_table <- as.data.frame(table(all_data$Code))
+names(sp_table) <- c("Code", "Freq")
+ranef_sp_df_ht <- join(ranef_sp_df_ht, sp_table, by = c("Code"))
+
+#update names using Flora package
+old_names <- sapply(ranef_sp_df_ht$Species..names.not.updated., FUN = remove.authors)
+new_names <- sapply(old_names, FUN = suggest.names)
+new_names <- get.taxa(new_names)$`scientific.name`
+
+ranef_sp_df_ht$Species..names.not.updated. <- new_names
+
+write.csv(ranef_sp_df_ht, "./model outputs/species_growth_rates_height.csv")
+
+
+#-------------------------------------------------------------------------------
+# height growth figure
+#-------------------------------------------------------------------------------
+data_11 <- subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0) %>%
+  dplyr::rename(height = H.2011..m., diam = dg.2011.cm)
+
+ft_ci_soils_11_ht <- lmer(inc_11_16_ht ~ 
+                            scale(height) +
+                            scale(BA.above2011) * C.Cerrado..G.generalist. +
+                            poly(PC1, 2) + poly(PC2, 2) +
+                            (1|Code) + (1|Plot),
+                          data = data_11)
+
+ft_ci_soils_11_diam <- lmer(inc_11_16 ~ 
+                              scale(log(diam)) +
+                              scale(BA.above2011) * C.Cerrado..G.generalist. +
+                              poly(PC1, 2) + poly(PC2, 2) +
+                              (1|Code),
+                            data = data_11)
+
+nyear <- 20
+c_growth <- data.frame(year = numeric(nyear),
+                       height = numeric(nyear))
+
+height <- mean(all_data[all_data$C.Cerrado..G.generalist. == "C" & all_data$Added == 2011, ]$H.2011..m., na.rm = TRUE)
+ft <- "C"
+PC1 <- mean(plot_data$PC1)
+PC2 <- mean(plot_data$PC2)
+BA.above2011 <- 0
+for(year in 1:nyear){
+  newdat <- data.frame(height = height,
+                       C.Cerrado..G.generalist. = ft,
+                       PC1 = PC1,
+                       PC2 = PC2,
+                       BA.above2011 = BA.above2011)
+  growth <- predict(ft_ci_soils_11_ht, newdata = newdat, re.form = NA)
+  height <- height + growth
+  c_growth$year[year] <- year
+  c_growth$height[year] <- height
+  
+}
+
+g_growth <- data.frame(year = numeric(nyear),
+                       height = numeric(nyear))
+
+height <- mean(all_data[all_data$C.Cerrado..G.generalist. == "G" & all_data$Added == 2011, ]$H.2011..m., na.rm = TRUE)
+ft <- "G"
+PC1 <- mean(plot_data$PC1)
+PC2 <- mean(plot_data$PC2)
+BA.above2011 <- 0
+for(year in 1:nyear){
+  newdat <- data.frame(height = height,
+                       C.Cerrado..G.generalist. = ft,
+                       PC1 = PC1,
+                       PC2 = PC2,
+                       BA.above2011 = BA.above2011)
+  growth <- predict(ft_ci_soils_11_ht, newdata = newdat, re.form = NA)
+  height <- height + growth
+  g_growth$year[year] <- year
+  g_growth$height[year] <- height
+}
+
+plot(c_growth$height ~ c_growth$year, type = "l", ylim = c(0,15))
+lines(g_growth$height ~ g_growth$year, lty = 2)
+
+#-------------------------------------------------------------------------------
+# simulating a whole stand
+
+recruits <- data_11 %>%
+  dplyr::filter(Added == 2011 & !is.na(height) & !is.na(diam))
+
+new_stand <- data.frame(Current.number = character(),
+                        Year = numeric(),
+                        height = numeric(),
+                        C.Cerrado..G.generalist. = character(),
+                        diam = numeric(),
+                        PC1 = numeric(),
+                        PC2 = numeric(),
+                        BA.above2011 = numeric())
+BAtot <- 0
+
+while(BAtot < 5){
+  c_tree <- recruits[recruits$C.Cerrado..G.generalist. == "C", ] %>%
+    '['(sample(nrow(.), 1), ) %>% #this might be clunky, but it selects one row at random
+    dplyr::select(Current.number, height, C.Cerrado..G.generalist., diam) %>%
+    dplyr::mutate(PC1 = mean(plot_data$PC1),
+                  PC2 = mean(plot_data$PC2),
+                  BA.above2011 = 0,
+                  Year = 0) %>%
+    dplyr::mutate(height = height + rnorm(n = nrow(c_tree), mean = 0, sd = 0.02))
+  g_tree <- recruits[recruits$C.Cerrado..G.generalist. == "G", ] %>%
+    '['(sample(nrow(.), 1), ) %>%
+    dplyr::select(Current.number, height, C.Cerrado..G.generalist., diam) %>%
+    dplyr::mutate(PC1 = mean(plot_data$PC1),
+                  PC2 = mean(plot_data$PC2),
+                  BA.above2011 = 0,
+                  Year = 0) %>%
+    dplyr::mutate(height = height + rnorm(n = nrow(g_tree), mean = 0, sd = 0.02))
+  
+  new_stand <- dplyr::bind_rows(new_stand, c_tree, g_tree)
+  
+  BAtot <- sum((new_stand$diam / 2)^2 * pi) / 10000 #convert to m^2 
+  BAtot <- BAtot * 10 #convert to equivalent BA for a 0.1-ha plot
+  
+}
+
+for(i in 1:nrow(new_stand)){
+  new_stand$BA.above2011[i] <- sum(((new_stand[new_stand$height >= new_stand$height[i], "diam"]/2)^2 * pi), na.rm = TRUE) / 10000
+}
+
+stand_data <- new_stand
+nyear <- 20
+for(year in 1:nyear){
+  height_inc <- predict(ft_ci_soils_11_ht, newdata = stand_data[stand_data$Year == (year - 1), ], re.form = NA)
+  diam_inc <- predict(ft_ci_soils_11_diam, newdata = stand_data[stand_data$Year == (year - 1), ], re.form = NA)
+  
+  update <- stand_data[stand_data$Year == (year - 1), ] %>%
+    mutate(Year = year,
+           height = height + height_inc,
+           diam = diam + diam_inc)
+  
+  for(i in 1:nrow(update)){
+    update$BA.above2011[i] <- sum((update[update$height >= update$height[i], "diam"]/2)^2 * pi, na.rm = TRUE) / 10000
+  }
+  
+  stand_data <- dplyr::bind_rows(stand_data, update)
+}
+
+ggplot(stand_data, aes(x = Year, y = height)) + 
+  geom_jitter(aes(col = C.Cerrado..G.generalist.)) +
+  stat_smooth(aes(col = C.Cerrado..G.generalist.), method = "loess")
+
+ggplot(stand_data, aes(x = Year, y = diam)) + 
+  geom_jitter(aes(col = C.Cerrado..G.generalist.)) +
+  stat_smooth(aes(col = C.Cerrado..G.generalist.), method = "loess")
+
+ggplot(stand_data, aes(x = Year, y = BA.above2011)) + 
+  # geom_jitter(aes(col = C.Cerrado..G.generalist.)) +
+  geom_line(aes(group = Current.number, col = C.Cerrado..G.generalist.))+ 
+  stat_smooth(aes(col = C.Cerrado..G.generalist.), method = "loess")
+

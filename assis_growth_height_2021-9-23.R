@@ -214,41 +214,47 @@ tree_data$Died_all <- as.factor(ifelse(tree_data$Died2011 == "y" | tree_data$Die
 
 # clean up data to estimate growth
 
-# calculate growth separately for each time interval
+# calculate diameter growth separately for each time interval
 tree_data$inc_06_11 <- NA
 tree_data$inc_11_16 <- NA
 tree_data$inc_06_16 <- NA
 for(i in 1:nrow(tree_data)){
   row <- tree_data[i, ]
   if(!is.na(row$Alive2006) & !is.na(row$Alive2011) & row$Alive2006 == "v" & row$Alive2011 == "v" ){
-    tree_data[i, "inc_06_11"] <- (as.numeric(row$H.2011..m.) - as.numeric(row$H.2006))/5
+    tree_data[i, "inc_06_11"] <- (as.numeric(row$dg.2011.cm) - as.numeric(row$dg.2006.cm))/5
   }
   if(!is.na(row$Alive2011) & !is.na(row$Alive2016) & row$Alive2011 == "v" & row$Alive2016 == "v" ){
-    tree_data[i, "inc_11_16"] <- (as.numeric(row$H.2016.m) - as.numeric(row$H.2011..m.))/5
+    tree_data[i, "inc_11_16"] <- (as.numeric(row$dg.2016.cm) - as.numeric(row$dg.2011.cm))/5
   }
   if(!is.na(row$Alive2006) & !is.na(row$Alive2016) & row$Alive2006 == "v" & row$Alive2016 == "v" ){
-    tree_data[i, "inc_06_16"] <- (as.numeric(row$H.2016.m) - as.numeric(row$H.2006))/10
+    tree_data[i, "inc_06_16"] <- (as.numeric(row$dg.2016.cm) - as.numeric(row$dg.2006.cm))/10
+  }
+}
+
+#calculate height growth for each interval
+tree_data$inc_06_11_ht <- NA
+tree_data$inc_11_16_ht <- NA
+tree_data$inc_06_16_ht <- NA
+for(i in 1:nrow(tree_data)){
+  row <- tree_data[i, ]
+  if(!is.na(row$Alive2006) & !is.na(row$Alive2011) & row$Alive2006 == "v" & row$Alive2011 == "v" ){
+    tree_data[i, "inc_06_11_ht"] <- (as.numeric(row$H.2011..m.) - as.numeric(row$H.2006))/5
+  }
+  if(!is.na(row$Alive2011) & !is.na(row$Alive2016) & row$Alive2011 == "v" & row$Alive2016 == "v" ){
+    tree_data[i, "inc_11_16_ht"] <- (as.numeric(row$H.2016.m) - as.numeric(row$H.2011..m.))/5
+  }
+  if(!is.na(row$Alive2006) & !is.na(row$Alive2016) & row$Alive2006 == "v" & row$Alive2016 == "v" ){
+    tree_data[i, "inc_06_16_ht"] <- (as.numeric(row$H.2016.m) - as.numeric(row$H.2006))/10
   }
 }
 
 # first interval growth is higher than second interval or overall growth
-t.test(tree_data$inc_06_11, tree_data$inc_11_16)
-t.test(tree_data$inc_06_11, tree_data$inc_06_16)
-t.test(tree_data$inc_11_16, tree_data$inc_06_16)
+t.test(tree_data$inc_06_11_ht, tree_data$inc_11_16_ht)
+t.test(tree_data$inc_06_11_ht, tree_data$inc_06_16_ht)
+t.test(tree_data$inc_11_16_ht, tree_data$inc_06_16_ht)
 
 # make a new dataframe with clean data
-tree_data_clean <- tree_data[, c(2, 3, 5, 7, 8, 9, 10, 12, 49, 13, 14, 35, 25, 15, 45, 46, 47, 50:57)]
-
-
-# t.test(tree_data[tree_data$Added == "2006", "dbh.annual.increment.cm._10.years"],
-#          tree_data[tree_data$Added == "2011", "dbh.annual.increment.cm._10.years"])
-# 
-# #remove negative growth
-# tree_data_pos <- subset(tree_data, dbh.annual.increment.cm._10.years > 0)
-# 
-# #only use trees which were present in 2006
-# tree_data_pos <- subset(tree_data_pos, dg.2006.cm > 0)
-
+tree_data_clean <- tree_data[, c(2, 3, 5, 7, 8, 9, 10, 12, 49, 13, 14, 35, 25, 15, 45, 46, 47, 50:60)]
 
 # PCA on soils
 
@@ -291,179 +297,92 @@ soil_scores <- yy
 
 plot_data$PC1 <- plot_scores[, 1]
 plot_data$PC2 <- plot_scores[, 2]
-# plot_data$PC1_std <- pca_scores_std[, 1]
-# plot_data$PC2_std <- pca_scores_std[, 2]
-
 
 #merge all data together
 all_data <- join(tree_data_clean, plot_data, by = c("Plot"))
 
 sp_list <- all_data[which(!duplicated(all_data$Species..names.not.updated.)), ]
 
-#how does QMD change over the gradient?
-qmd <- aggregate(as.numeric(tree_data$dg.2006.cm), by = list(tree_data$Plot), FUN = function(x){sqrt(mean(x^2, na.rm = TRUE))})
-plot(qmd$x ~ plot_data$TBA.2006.m2ha.1)
-
-density <- aggregate(tree_data$dg.2006.cm, by = list(tree_data$Plot), FUN = function(x){sum(x, na.rm = TRUE)})
-
-plot(log(density$x) ~ log(qmd$x))
-
 #self-thinning
 summary(lm(log(density[plot_data$TBA.2006.m2ha.1 > 18, ]$x) ~ log(qmd[plot_data$TBA.2006.m2ha.1 > 18, ]$x)))
 abline(coef(lm(log(density[plot_data$TBA.2006.m2ha.1 > 18, ]$x) ~ log(qmd[plot_data$TBA.2006.m2ha.1 > 18, ]$x))))
 
 #do generalists grow faster?
-t.test(inc_06_11 ~ C.Cerrado..G.generalist., data = all_data) 
-t.test(inc_11_16 ~ C.Cerrado..G.generalist., data = all_data)
-
-#------------------------------------------------------------------------------
-# Make a figure of the PCA
-#------------------------------------------------------------------------------
-library("viridis")
-
-tiff(filename="./plots/soil_PCA_axes_1_2.tiff", 
-     type = "cairo",
-     antialias = "gray",
-     compression = "lzw",
-     units="in", 
-     width = 4, 
-     height= 4, 
-     pointsize=9, 
-     res=600)
-
-par(mar = c(3.9,3.9,1,0),
-    oma = c(0,0,0,0))
-
-col <- viridis(30)[order(plot_data$TBA.2006.m2ha.1, decreasing = TRUE)]
-
-layout(mat = matrix(data = c(1,2), nrow = 1, ncol = 2),
-       widths = c(.85, .15))
-
-plot(NA,
-     xlab = "", ylab = "",
-     xaxt = "n",
-     yaxt = "n",
-     xlim = c( (min(c(plot_scores[, 1], soil_scores[, 1]) - 0.1)), 
-               (max(c(plot_scores[, 1], soil_scores[, 1])) + 0.1)),
-     ylim = c( (min(c(plot_scores[, 2], soil_scores[, 2]) - 0.1)), 
-               (max(c(plot_scores[, 2], soil_scores[, 2])) + 0.1)))
-  
-  abline(h = 0)
-  abline(v = 0)
-  axis(1)
-  mtext(side = 1, line = 2, text = "PC1 (43%)")
-  axis(2)
-  mtext(side = 2, line = 2, text = "PC2 (31%)")
-  # x<-pointLabel(x = plot_scores[, 1], y = plot_scores[, 2], labels = as.character(plot_data$Plot), cex = 0.7)
-  
-  points(x = plot_scores[, 1], y = plot_scores[, 2], cex = 1,
-         col = col,
-         bg = col,
-         pch = 21)
-  
-  
-  segments(x0 = 0, y0 = 0, x1 = soil_scores[, 1]*.9, y1 = soil_scores[, 2]*.9)
-  yoffsets <- c(0,0,0,0,0,0,0,0,0,0,0,0,0,0.05,0,0,0)
-  xoffsets <- c(0,0,0,0,0,0,0,0,-0.2,0,0.2,0,0,0,0,0,0)
-  
-  text(x = soil_scores[, 1]+xoffsets, y = soil_scores[, 2] + yoffsets, 
-       labels = clean_pca_names, cex = 1)
-  
-  par(mar = c(0,0,0,0))
-  
-  plot.new()
-  plot.window(ylim = c(0,10), xlim = c(0,10))
-  
-  
-  lgd_ = rep(NA, 30)
-  lgd_[c(1,30)] = c(round(max(plot_data$TBA.2006.m2ha.1),1), 
-                    round(min(plot_data$TBA.2006.m2ha.1),1))
-  legend(x = 0, y = 7,
-         legend = lgd_,
-         fill = viridis(30),
-         border = NA,
-         bty = "n",
-         y.intersp = 0.2,
-         x.intersp = .5,
-         cex = 1, text.font = 2)
-  text(x = 0, y = 8, labels = "Basal\narea", 
-       pos = 4, cex = 1)
-  text(x = 0, y = 7.4, labels = expression(paste("(m"^"2"," ha"^"-1",")")), 
-       pos = 4, cex = 1)
-
-dev.off()
+t.test(inc_06_11_ht ~ C.Cerrado..G.generalist., data = all_data) 
+t.test(inc_11_16_ht ~ C.Cerrado..G.generalist., data = all_data)
 
 
 #----------------------------------------------------------------------
 # Model comparison for table 1
+# height
 #----------------------------------------------------------------------
 # just species
-mod1 <- expression(lmer(inc_06_11 ~ (1|Code) + (1|Plot), data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))) # just species and diameter
+mod1 <- expression(lmer(inc_06_11_ht ~ (1|Code) + (1|Plot), data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0))) # just species and diameter
 
-mod2 <- expression(lmer(inc_06_11 ~ log(dg.2006.cm) + (1|Code) + (1|Plot), data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0)))
+mod2 <- expression(lmer(inc_06_11_ht ~ log(dg.2006.cm) + (1|Code) + (1|Plot), data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0)))
   
 # linear soils
-mod3 <- expression(lmer(inc_06_11 ~ scale(PC1) + scale(PC2) + 
+mod3 <- expression(lmer(inc_06_11_ht ~ scale(PC1) + scale(PC2) + 
                (1|Code) + (1|Plot),
-             data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0)))
+             data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0)))
   
 # quadratic soils
-mod4 <- expression(lmer(inc_06_11 ~ poly(PC1,2)  +
+mod4 <- expression(lmer(inc_06_11_ht ~ poly(PC1,2)  +
                           poly(PC2,2) +  (1|Code) + (1|Plot),
-             data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0)))
+             data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0)))
 
 # just size and competition
-mod5 <- expression((lmer(inc_06_11 ~ 
+mod5 <- expression((lmer(inc_06_11_ht ~ 
                            scale(log(dg.2006.cm)) +
                            scale(BA.above2006) +
                            (1|Code) + (1|Plot),
-                         data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))))
+                         data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0))))
 
 # let FTs differ in competition susceptibility
-mod6 <- expression((lmer(inc_06_11 ~ 
+mod6 <- expression((lmer(inc_06_11_ht ~ 
                            scale(log(dg.2006.cm)) +
                            scale(BA.above2006) * C.Cerrado..G.generalist. +
                            (1|Code) + (1|Plot),
-                         data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))))
+                         data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0))))
 
 # let FTs also differ in diameter-growth relationships
 # doesn't help AIC
-mod7 <- expression((lmer(inc_06_11 ~ 
+mod7 <- expression((lmer(inc_06_11_ht ~ 
                            scale(log(dg.2006.cm))* C.Cerrado..G.generalist. +
                            scale(BA.above2006) * C.Cerrado..G.generalist. +
                            (1|Code) + (1|Plot),
-                         data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))))
+                         data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0))))
   
 # add in PC1
-mod8 <- expression((lmer(inc_06_11 ~ 
+mod8 <- expression((lmer(inc_06_11_ht ~ 
                            scale(log(dg.2006.cm)) +
                            scale(BA.above2006) * C.Cerrado..G.generalist. +
                            poly(PC1, 2) + 
                            (1|Code) + (1|Plot),
-                         data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))))
+                         data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0))))
 # add in linear PC2  
-mod9 <-  expression((lmer(inc_06_11 ~ 
+mod9 <-  expression((lmer(inc_06_11_ht ~ 
                  scale(log(dg.2006.cm)) +
                  scale(BA.above2006) * C.Cerrado..G.generalist. +
                  poly(PC1, 2) + PC2 +
                  (1|Code) + (1|Plot),
-               data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))))
+               data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0))))
 
 #best model
 # quadratic PC2
-mod10 <- expression((lmer(inc_06_11 ~ 
+mod10 <- expression((lmer(inc_06_11_ht ~ 
                             scale(log(dg.2006.cm)) +
                             scale(BA.above2006) * C.Cerrado..G.generalist. +
                             poly(PC1, 2) + poly(PC2, 2) +
                             (1|Code) + (1|Plot),
-                          data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))))
+                          data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0))))
 
-mod11 <- expression((lmer(inc_06_11 ~ 
+mod11 <- expression((lmer(inc_06_11_ht ~ 
                             scale(log(dg.2006.cm)) +
                             scale(TBA.2006.m2ha.1) * C.Cerrado..G.generalist. +
                             poly(PC1, 2) + poly(PC2, 2) +
                             (1|Code) + (1|Plot),
-                          data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))))
+                          data = subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0))))
 
 model_list <- c(paste0("mod", seq(1:11)))
 
@@ -488,72 +407,72 @@ write.csv(model_table, "./model outputs/model_table_06_11.csv")
 # redo for second time period
 
 # just species
-mod1 <- expression(lmer(inc_11_16 ~ (1|Code) + (1|Plot), data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))) # just species and diameter
+mod1 <- expression(lmer(inc_11_16_ht ~ (1|Code) + (1|Plot), data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0))) # just species and diameter
 
-mod2 <- expression(lmer(inc_11_16 ~ log(dg.2011.cm) + (1|Code) + (1|Plot), data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0)))
+mod2 <- expression(lmer(inc_11_16_ht ~ log(dg.2011.cm) + (1|Code) + (1|Plot), data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0)))
 
 # linear soils
-mod3 <- expression(lmer(inc_11_16 ~ scale(PC1) + scale(PC2) + 
+mod3 <- expression(lmer(inc_11_16_ht ~ scale(PC1) + scale(PC2) + 
                           (1|Code) + (1|Plot),
-                        data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0)))
+                        data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0)))
 
 # quadratic soils
-mod4 <- expression(lmer(inc_11_16 ~ poly(PC1,2)  +
+mod4 <- expression(lmer(inc_11_16_ht ~ poly(PC1,2)  +
                           poly(PC2,2) +  (1|Code) + (1|Plot),
-                        data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0)))
+                        data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0)))
 
 # just size and competition
-mod5 <- expression((lmer(inc_11_16 ~ 
+mod5 <- expression((lmer(inc_11_16_ht ~ 
                            scale(log(dg.2011.cm)) +
                            scale(BA.above2011) +
                            (1|Code) + (1|Plot),
-                         data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))))
+                         data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0))))
 
 # let FTs differ in competition susceptibility
-mod6 <- expression((lmer(inc_11_16 ~ 
+mod6 <- expression((lmer(inc_11_16_ht ~ 
                            scale(log(dg.2011.cm)) +
                            scale(BA.above2011) * C.Cerrado..G.generalist. +
                            (1|Code) + (1|Plot),
-                         data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))))
+                         data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0))))
 
 # let FTs also differ in diameter-growth relationships
 # doesn't help AIC
-mod7 <- expression((lmer(inc_11_16 ~ 
+mod7 <- expression((lmer(inc_11_16_ht ~ 
                            scale(log(dg.2011.cm))* C.Cerrado..G.generalist. +
                            scale(BA.above2011) * C.Cerrado..G.generalist. +
                            (1|Code) + (1|Plot),
-                         data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))))
+                         data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0))))
 
 # add in PC1
-mod8 <- expression((lmer(inc_11_16 ~ 
+mod8 <- expression((lmer(inc_11_16_ht ~ 
                            scale(log(dg.2011.cm)) +
                            scale(BA.above2011) * C.Cerrado..G.generalist. +
                            poly(PC1, 2) + 
                            (1|Code) + (1|Plot),
-                         data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))))
+                         data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0))))
 # add in linear PC2  
-mod9 <-  expression((lmer(inc_11_16 ~ 
+mod9 <-  expression((lmer(inc_11_16_ht ~ 
                             scale(log(dg.2011.cm)) +
                             scale(BA.above2011) * C.Cerrado..G.generalist. +
                             poly(PC1, 2) + PC2 +
                             (1|Code) + (1|Plot),
-                          data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))))
+                          data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0))))
 
 #best model
 # quadratic PC2
-mod10 <- expression((lmer(inc_11_16 ~ 
+mod10 <- expression((lmer(inc_11_16_ht ~ 
                             scale(log(dg.2011.cm)) +
                             scale(BA.above2011) * C.Cerrado..G.generalist. +
                             poly(PC1, 2) + poly(PC2, 2) +
                             (1|Code) + (1|Plot),
-                          data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))))
+                          data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0))))
 
-mod11 <- expression((lmer(inc_11_16 ~ 
+mod11 <- expression((lmer(inc_11_16_ht ~ 
                             scale(log(dg.2011.cm)) +
                             scale(TBA.2011.m2.ha.1) * C.Cerrado..G.generalist. +
                             poly(PC1, 2) + poly(PC2, 2) +
                             (1|Code) + (1|Plot),
-                          data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))))
+                          data = subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0))))
 
 model_list <- c(paste0("mod", seq(1:11)))
 
@@ -574,58 +493,58 @@ model_table <- data.frame(model_number = model_list,
 
 write.csv(model_table, "./model outputs/model_table_11_16.csv")
 
-
 #----------------------------------------------------------------------
 # Full model: FT x CI interaction with soils
 # = model 10 from above
-# all_data$inc_06_11_rel <- all_data$inc_06_11/all_data$dg.2006.cm
-# all_data$inc_11_16_rel <- all_data$inc_11_16/all_data$dg.2011.cm
+# all_data$inc_06_11_ht_rel <- all_data$inc_06_11_ht/all_data$dg.2006.cm
+# all_data$inc_11_16_ht_rel <- all_data$inc_11_16_ht/all_data$dg.2011.cm
 options(na.action = na.omit)
-data_06 <- subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0)
-data_11 <- subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0)
+data_06 <- subset(all_data, inc_06_11_ht >= min.growth & dg.2006.cm > 0)
+data_11 <- subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0)
 
-ft_ci_soils_06 <- lmer(inc_06_11 ~ 
-                         scale(log(dg.2006.cm)) +
+ft_ci_soils_06_ht <- lmer(inc_06_11_ht ~ 
+                         scale(H.2006) +
                          scale(BA.above2006) * C.Cerrado..G.generalist. +
-                         poly(PC1, 2) + poly(PC2, 2) +
-                         (1|Code),
+                         # poly(PC1, 2) + poly(PC2, 2) +
+                           PC1 + PC2 + 
+                         (1|Code) + (1|Plot),
                        data = data_06)
 
-ft_ci_soils_11 <- lmer(inc_11_16 ~ 
-                         scale(log(dg.2011.cm)) +
+ft_ci_soils_11_ht <- lmer(inc_11_16_ht ~ 
+                         scale(H.2011..m.) +
                          scale(BA.above2011) * C.Cerrado..G.generalist. +
-                         poly(PC1, 2) + poly(PC2, 2) +
-                         (1|Code),
+                         # poly(PC1, 2) + poly(PC2, 2) +
+                         (1|Code) + (1|Plot),
                        data = data_11)
 
-summary(ft_ci_soils_06)
-summary(ft_ci_soils_11)
+summary(ft_ci_soils_06_ht)
+summary(ft_ci_soils_11_ht)
 
-write.csv(summary(ft_ci_soils_06)$coef, "./model outputs/model_coefs_06.csv")
-write.csv(summary(ft_ci_soils_11)$coef, "./model outputs/model_coefs_11.csv")
+write.csv(summary(ft_ci_soils_06_ht)$coef, "./model outputs/model_coefs_06_ht.csv")
+write.csv(summary(ft_ci_soils_11_ht)$coef, "./model outputs/model_coefs_11_ht.csv")
 
 
-plot(residuals(ft_ci_soils_06) ~ fitted(ft_ci_soils_06))
+plot(residuals(ft_ci_soils_06_ht) ~ fitted(ft_ci_soils_06_ht))
 abline(h = 0)
-ggqqplot(residuals(ft_ci_soils_06))
-plot(allEffects(ft_ci_soils_06, partial.residuals = FALSE))
+ggqqplot(residuals(ft_ci_soils_06_ht))
+plot(allEffects(ft_ci_soils_06_ht, partial.residuals = FALSE))
 plot(Effect(focal.predictors = c("BA.above2006", "C.Cerrado..G.generalist."),
-            mod = ft_ci_soils_06))
+            mod = ft_ci_soils_06_ht))
 plot(Effect(focal.predictors = c("dg.2006.cm", "C.Cerrado..G.generalist."),
-            mod = ft_ci_soils_06))
+            mod = ft_ci_soils_0_ht))
 plot(Effect(focal.predictors = c("PC1"),
-            mod = ft_ci_soils_06))
+            mod = ft_ci_soils_06_ht))
 
-plot(residuals(ft_ci_soils_11) ~ fitted(ft_ci_soils_11))
+plot(residuals(ft_ci_soils_11_ht) ~ fitted(ft_ci_soils_11_ht))
 abline(h = 0)
-ggqqplot(residuals(ft_ci_soils_11))
-plot(allEffects(ft_ci_soils_11, partial.residuals = FALSE))
+ggqqplot(residuals(ft_ci_soils_11_ht))
+plot(allEffects(ft_ci_soils_11_ht, partial.residuals = FALSE))
 plot(Effect(focal.predictors = c("BA.above2006", "C.Cerrado..G.generalist."), 
-            mod = ft_ci_soils_11, transformation = list(link = log, inverse = exp)))
+            mod = ft_ci_soils_11_ht, transformation = list(link = log, inverse = exp)))
 plot(Effect(focal.predictors = c("dg.2006.cm", "C.Cerrado..G.generalist."), 
-            mod = ft_ci_soils_11, transformation = list(link = log, inverse = exp)))
+            mod = ft_ci_soils_11_ht, transformation = list(link = log, inverse = exp)))
 plot(Effect(focal.predictors = c("PC1"), 
-            mod = ft_ci_soils_11, transformation = list(link = log, inverse = exp)))
+            mod = ft_ci_soils_11_ht, transformation = list(link = log, inverse = exp)))
 
 #making sure everything converged okay; I think I stole this from Ben Bolker
 # derivs1 <- ft_ci_soils_06@optinfo$derivs
@@ -639,16 +558,16 @@ plot(Effect(focal.predictors = c("PC1"),
 # qqmath(ranef(ft_ci_soils_06, condVar = TRUE), strip = FALSE)$Code
 
 ## Species growth rates (appendix table 1)
-ranef_sp_06 <- exp(ranef(ft_ci_soils_06, condVar = TRUE)$Code)
-ranef_sp_11 <- exp(ranef(ft_ci_soils_11, condVar = TRUE)$Code)
-ranef_sp_df_06 <- data.frame(rel_growth_06 = ranef_sp_06$`(Intercept)`,
-                          Code = rownames(ranef_sp_06))
-ranef_sp_df_11 <- data.frame(rel_growth_11 = ranef_sp_11$`(Intercept)`,
-                             Code = rownames(ranef_sp_11))
+ranef_sp_06 <- exp(ranef(ft_ci_soils_06_ht, condVar = TRUE)$Code)
+ranef_sp_11 <- exp(ranef(ft_ci_soils_11_ht, condVar = TRUE)$Code)
+ranef_sp_df_06 <- data.frame(rel_growth_06_ht = ranef_sp_06_ht$`(Intercept)`,
+                          Code = rownames(ranef_sp_06_ht))
+ranef_sp_df_11 <- data.frame(rel_growth_11_ht = ranef_sp_11_ht$`(Intercept)`,
+                             Code = rownames(ranef_sp_11_ht))
 
-ranef_sp_df <- join(ranef_sp_df_06, ranef_sp_df_11, by = "Code", type = "full")
+ranef_sp_df_ht <- join(ranef_sp_df_06_ht, ranef_sp_df_11_ht, by = "Code", type = "full")
 
-ranef_sp_df <- join(ranef_sp_df, 
+ranef_sp_df_ht <- join(ranef_sp_df_ht, 
                     tree_data[, c("Code",
                                   "Species..names.not.updated.",
                                   "Family",
@@ -658,1481 +577,205 @@ ranef_sp_df <- join(ranef_sp_df,
                     type = "left",
                     match = "first")
 
-ranef_sp_df <- ranef_sp_df[order(ranef_sp_df$rel_growth_06), ]
+ranef_sp_df_ht <- ranef_sp_df_ht[order(ranef_sp_df_ht$rel_growth_06), ]
 
 sp_table <- as.data.frame(table(all_data$Code))
 names(sp_table) <- c("Code", "Freq")
-ranef_sp_df <- join(ranef_sp_df, sp_table, by = c("Code"))
+ranef_sp_df_ht <- join(ranef_sp_df_ht, sp_table, by = c("Code"))
 
 #update names using Flora package
-old_names <- sapply(ranef_sp_df$Species..names.not.updated., FUN = remove.authors)
+old_names <- sapply(ranef_sp_df_ht$Species..names.not.updated., FUN = remove.authors)
 new_names <- sapply(old_names, FUN = suggest.names)
 new_names <- get.taxa(new_names)$`scientific.name`
 
-ranef_sp_df$Species..names.not.updated. <- new_names
+ranef_sp_df_ht$Species..names.not.updated. <- new_names
 
-write.csv(ranef_sp_df, "./model outputs/species_growth_rates.csv")
-
-#------------------------------------------------------------------------------
-# Mortality modeling
-#------------------------------------------------------------------------------
-library("pROC")
+write.csv(ranef_sp_df_ht, "./model outputs/species_growth_rates_height.csv")
 
 
-#------------------------------------------------------------------------------
-# Model selection
-#------------------------------------------------------------------------------
-mod1 <- expression(glm(Died2011 ~ scale(log(dg.2006.cm)),
-                            data = subset(all_data, dg.2006.cm > 0),
-                            family = binomial(link = "logit")))
+#-------------------------------------------------------------------------------
+# height growth figure
+#-------------------------------------------------------------------------------
+data_11 <- subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 0) %>%
+  dplyr::rename(height = H.2011..m., diam = dg.2011.cm)
 
-# linear soils
-mod2 <- expression(glm(Died2011 ~ scale(PC1) + scale(PC2),
-                       data = subset(all_data, dg.2006.cm > 0),
-                       family = binomial(link = "logit")))
-
-# quadratic soils
-mod3 <- expression(glm(Died2011 ~ poly(PC1, 2) + poly(PC2, 2),
-                       data = subset(all_data, dg.2006.cm > 0),
-                       family = binomial(link = "logit")))
-
-# just size and competition
-mod4 <- expression(glm(Died2011 ~ scale(log(dg.2006.cm)) +
-                         scale(BA.above2006),
-                       data = subset(all_data, dg.2006.cm > 0),
-                       family = binomial(link = "logit")))
-
-# let FTs differ in competition susceptibility
-mod5 <- expression(glm(Died2011 ~ scale(log(dg.2006.cm)) +
-                         scale(BA.above2006) * C.Cerrado..G.generalist.,
-                       data = subset(all_data, dg.2006.cm > 0),
-                       family = binomial(link = "logit")))
-
-# let FTs also differ in diameter-growth relationships
-# doesn't help AIC
-mod6 <- expression(glm(Died2011 ~ scale(log(dg.2006.cm))* C.Cerrado..G.generalist. +
-                         scale(BA.above2006) * C.Cerrado..G.generalist.,
-                       data = subset(all_data, dg.2006.cm > 0),
-                       family = binomial(link = "logit")))
-
-#best model
-# add in PC1
-mod7 <- expression(glm(Died2011 ~ scale(log(dg.2006.cm)) +
-                         scale(BA.above2006) * C.Cerrado..G.generalist. +
-                         poly(as.numeric(PC1), 2),
-                       data = subset(all_data, dg.2006.cm > 0),
-                       family = binomial(link = "logit")))
-
-# add in linear PC2  
-mod8 <-  expression(glm(Died2011 ~  scale(log(dg.2006.cm)) +
-                          scale(BA.above2006) * C.Cerrado..G.generalist. +
-                          poly(PC1, 2) + PC2,
-                        data = subset(all_data, dg.2006.cm > 0),
-                        family = binomial(link = "logit")))
-
-# quadratic PC2
-mod9 <- expression(glm(Died2011 ~  scale(log(dg.2006.cm)) +
-                          scale(BA.above2006) * C.Cerrado..G.generalist. +
-                          poly(PC1, 2) + poly(PC2, 2),
-                        data = subset(all_data, dg.2006.cm > 0),
-                        family = binomial(link = "logit")))
-
-#only include PC1 because PC2 increases the AIC
-mod10 <- expression(glm(Died2011 ~  scale(log(dg.2006.cm)) +
-                          scale(TBA.2006.m2ha.1) * C.Cerrado..G.generalist. +
-                          poly(PC1, 2),
-                        data = subset(all_data, dg.2006.cm > 0),
-                        family = binomial(link = "logit")))
-
-
-model_list <- c(paste0("mod", seq(1:10)))
-
-model_summary <- list(model_names = model_list,
-                      models_fit = lapply(model_list, FUN = function(x){eval(eval(str2expression(x)))}))
-
-model_summary$n_params <- lapply(model_summary$models_fit, function(x){attributes(logLik(x))$df})
-model_summary$AICc <- lapply(model_summary$models_fit, function(x){AICc(x)})
-model_summary$R2m <- lapply(model_summary$models_fit, function(x){r.squaredGLMM(x)[1,1]})
-model_summary$R2c <- lapply(model_summary$models_fit, function(x){r.squaredGLMM(x)[1,2]})
-
-model_table <- data.frame(model_number = model_list,
-                          desc = NA,
-                          n_params = unlist(model_summary$n_params),
-                          AICc = unlist(model_summary$AICc),
-                          R2m = unlist(model_summary$R2m),
-                          R2c = unlist(model_summary$R2c))
-
-write.csv(model_table, "./model outputs/model_table_06_11_mortality.csv")
-
-#------------------------------------------------------------------------------
-# redo for second time period
-
-mod1 <- expression(glm(Died2016 ~ scale(log(dg.2011.cm)),
-                       data = subset(all_data, dg.2011.cm > 0),
-                       family = binomial(link = "logit")))
-
-# linear soils
-mod2 <- expression(glm(Died2016 ~ scale(PC1) + scale(PC2),
-                       data = subset(all_data, dg.2011.cm > 0),
-                       family = binomial(link = "logit")))
-
-# quadratic soils
-mod3 <- expression(glm(Died2016 ~ poly(PC1, 2) + poly(PC2, 2),
-                       data = subset(all_data, dg.2011.cm > 0),
-                       family = binomial(link = "logit")))
-
-# just size and competition
-mod4 <- expression(glm(Died2016 ~ scale(log(dg.2011.cm)) +
-                         scale(BA.above2011),
-                       data = subset(all_data, dg.2011.cm > 0),
-                       family = binomial(link = "logit")))
-
-# let FTs differ in competition susceptibility
-mod5 <- expression(glm(Died2016 ~ scale(log(dg.2011.cm)) +
-                         scale(BA.above2011) * C.Cerrado..G.generalist.,
-                       data = subset(all_data, dg.2011.cm > 0),
-                       family = binomial(link = "logit")))
-
-# let FTs also differ in diameter-growth relationships
-# doesn't help AIC
-mod6 <- expression(glm(Died2016 ~ scale(log(dg.2011.cm))* C.Cerrado..G.generalist. +
-                         scale(BA.above2011) * C.Cerrado..G.generalist.,
-                       data = subset(all_data, dg.2011.cm > 0),
-                       family = binomial(link = "logit")))
-
-# add in PC1
-mod7 <- expression(glm(Died2016 ~ scale(log(dg.2011.cm)) +
+ft_ci_soils_11_ht <- lmer(inc_11_16_ht ~ 
+                         scale(height) +
                          scale(BA.above2011) * C.Cerrado..G.generalist. +
-                         poly(as.numeric(PC1), 2),
-                       data = subset(all_data, dg.2011.cm > 0),
-                       family = binomial(link = "logit")))
+                         poly(PC1, 2) + poly(PC2, 2) +
+                         (1|Code) + (1|Plot),
+                       data = data_11)
 
-# add in linear PC2  
-mod8 <-  expression(glm(Died2016 ~  scale(log(dg.2011.cm)) +
-                          scale(BA.above2011) * C.Cerrado..G.generalist. +
-                          poly(PC1, 2) + PC2,
-                        data = subset(all_data, dg.2011.cm > 0),
-                        family = binomial(link = "logit")))
-#best model
-# quadratic PC2
-mod9 <- expression(glm(Died2016 ~  scale(log(dg.2011.cm)) +
+ft_ci_soils_11_diam <- lmer(inc_11_16 ~ 
+                         scale(log(diam)) +
                          scale(BA.above2011) * C.Cerrado..G.generalist. +
-                         poly(PC1, 2) + poly(PC2, 2),
-                       data = subset(all_data, dg.2011.cm > 0),
-                       family = binomial(link = "logit")))
-
-#only include PC1 because PC2 increases the AIC
-mod10 <- expression(glm(Died2016 ~  scale(log(dg.2011.cm)) +
-                          scale(TBA.2011.m2.ha.1) * C.Cerrado..G.generalist. +
-                          poly(PC1, 2),
-                        data = subset(all_data, dg.2011.cm > 0),
-                        family = binomial(link = "logit")))
-
-
-model_list <- c(paste0("mod", seq(1:10)))
-
-model_summary <- list(model_names = model_list,
-                      models_fit = lapply(model_list, FUN = function(x){eval(eval(str2expression(x)))}))
-
-model_summary$n_params <- lapply(model_summary$models_fit, function(x){attributes(logLik(x))$df})
-model_summary$AICc <- lapply(model_summary$models_fit, function(x){AICc(x)})
-model_summary$R2m <- lapply(model_summary$models_fit, function(x){r.squaredGLMM(x)[1,1]})
-model_summary$R2c <- lapply(model_summary$models_fit, function(x){r.squaredGLMM(x)[1,2]})
-
-model_table <- data.frame(model_number = model_list,
-                          desc = NA,
-                          n_params = unlist(model_summary$n_params),
-                          AICc = unlist(model_summary$AICc),
-                          R2m = unlist(model_summary$R2m),
-                          R2c = unlist(model_summary$R2c))
-
-write.csv(model_table, "./model outputs/model_table_11_16_mortality.csv")
-
-#------------------------------------------------------------------------------
-#best model from selection below
-mort_ft_ci_soils_glm_2011 <- glm(Died2011 ~ log(dg.2006.cm) +
-                                   BA.above2006 * C.Cerrado..G.generalist. +
-                                   poly(PC1, 2),
-                                 data = subset(all_data, dg.2006.cm > 0),
-                                 family = binomial(link = "logit"))
-
-summary(mort_ft_ci_soils_glm_2011)
-r.squaredGLMM(mort_ft_ci_soils_glm_2011)
-AIC(mort_ft_ci_soils_glm_2011)
-plot.roc(mort_ft_ci_soils_glm_2011$y, 
-         fitted(mort_ft_ci_soils_glm_2011),print.auc = TRUE, 
-         col = "green", lty = 2)
-plot(Effect(mort_ft_ci_soils_glm_2011, 
-            focal.predictors = c("BA.above2006", "C.Cerrado..G.generalist.")))
-
-mort_ft_ci_soils_glm_2016 <- glm(Died2016 ~  log(dg.2011.cm) +
-                                   BA.above2011 * C.Cerrado..G.generalist. +
-                                   poly(PC1, 2) + poly(PC2, 2),
-                                 data = subset(all_data, dg.2011.cm > 0),
-                                 family = binomial(link = "logit"))
-
-summary(mort_ft_ci_soils_glm_2016)
-r.squaredGLMM(mort_ft_ci_soils_glm_2016)
-AIC(mort_ft_ci_soils_glm_2016)
-plot.roc(mort_ft_ci_soils_glm_2016$y, 
-         fitted(mort_ft_ci_soils_glm_2016),print.auc = TRUE, 
-         col = "green", lty = 2)
-plot(Effect(mort_ft_ci_soils_glm_2016, 
-            focal.predictors = c("BA.above2011", "C.Cerrado..G.generalist.")))
-
-# 
-# summary(mort_ft_ci_soils_glm_died_all)
-# r.squaredGLMM(mort_ft_ci_soils_glm_died_all)
-# AICc(mort_ft_ci_soils_glm_died_all)
-# plot.roc(mort_ft_ci_soils_glm_died_all$y, 
-#          fitted(mort_ft_ci_soils_glm_died_all),print.auc = TRUE, 
-#          col = "green", lty = 2)
-# plot(Effect(mort_ft_ci_soils_glm_died_all, 
-#             focal.predictors = c("BA.above2006", "C.Cerrado..G.generalist.")))
-
-#hosmer-lemeshow test seems pretty okay!
-hl1 <- hoslem.test(mort_ft_ci_soils_glm_2011$y, 
-                   fitted(mort_ft_ci_soils_glm_2011), g=10)
-hl2 <- hoslem.test(mort_ft_ci_soils_glm_2016$y, 
-                   fitted(mort_ft_ci_soils_glm_2016), g=10)
-# hl3 <- hoslem.test(mort_ft_ci_soils_glm_died_all$y, 
-#                    fitted(mort_ft_ci_soils_glm_died_all), g=10)
-
-#-----------------------------------------------------
-# Effects plots
-#-----------------------------------------------------
-
-#------------------------------------------------------------------------------
-# Figure S TODO
-# Overall plot-level results
-#------------------------------------------------------------------------------
-# TODO make vector
-
-svg(filename="./plots/Figure 1 overall growth basal area.svg", 
-     width = 3, 
-     height=3, 
-     pointsize=7)
-
-par(mar = c(5.1, 5.1, 2, 1))
-
-plot(plot_data$Diameter.increment.cm.yr ~ plot_data$TBA.2006.m2ha.1, 
-     pch = 21,
-     bg = "darkgray",
-     xlab = "",
-     ylab = "",
-     axes = FALSE)
-
-abline(coef(lm(plot_data$Diameter.increment.cm.yr ~ plot_data$TBA.2006.m2ha.1)))
-
-mtext(side = 1, text = expression(paste("Stand basal area (m"^"2"," ha"^"-1",")")),
-      line = 2.8, cex = 1.6)
-mtext(side = 2, text = expression(paste("Mean diameter increment (cm year"^"-1", ")")), 
-      line = 2.8, cex = 1.6)
-
-axis(side =1, cex.axis = 1.5)
-axis(side =2, cex.axis = 1.5)
-
-dev.off()
-
-
-
-
-#------------------------------------------------------------------------------
-# Figure 3
-# Growth and mortality ~ soil variables
-#------------------------------------------------------------------------------
-svg(filename="./plots/Figure 3 soil variables.svg", 
-     width = 6, 
-     height=6, 
-     pointsize=8)
-
-par(mar = c(2, 2, 2, 1),
-    oma = c(6,3.1,1,0),
-    mfcol = c(2,2))
-
-opar <- par() #TODO add the arrows
-
-eff <- Effect(focal.predictors = c("PC1"), 
-              mod = ft_ci_soils_06, xlevels = 100,
-              partial.residuals = TRUE,
-              se = TRUE)
-
-y <- eff$fit
-x <- eff[["x"]]$PC1
-x.fit <- eff[["x.all"]]$PC1
-
-fitted <- y[closest(x.fit, x)]
-resids <- eff$residuals + fitted
-
-resid_df <- data.frame(x.fit,
-                       resids)
-
-e1_r_agg <- aggregate(resid_df, by = list(resid_df$x.fit), FUN = mean)[, c(2,3)]
-e1_r_agg[, 3] <- aggregate(resid_df, by = list(resid_df$x.fit), FUN = se)[, 3]
-names(e1_r_agg) <- c("x.fit", "mean_part_resids", "se_resids")
-e1_r_agg$low <- e1_r_agg$mean_part_resids - e1_r_agg$se_resids
-e1_r_agg$high <- e1_r_agg$mean_part_resids + e1_r_agg$se_resids
-# e1_r_agg$exp_low <- exp(e1_r_agg$mean_part_resids - e1_r_agg$se_resids)
-# e1_r_agg$exp_high <- exp(e1_r_agg$mean_part_resids + e1_r_agg$se_resids)
-# e1_r_agg$exp_mean_resids <- exp(e1_r_agg[, 2])
-
-
-eff2 <- Effect(focal.predictors = c("PC1"), 
-               mod = ft_ci_soils_11, xlevels = 100,
-               partial.residuals = TRUE,
-               se = TRUE)
-
-dat <- data.frame(y = eff$fit,
-                  lower = eff$lower,
-                  upper = eff$upper,
-                  soil = eff[["x"]][["PC1"]])
-
-dat2 <- data.frame(y = eff2$fit,
-                   lower = eff2$lower,
-                   upper = eff2$upper,
-                   soil = eff2[["x"]][["PC1"]])
-
-plot(x = NA, 
-     xlim = c(-1, 1.5),
-     ylim = c(.15, .35),
-     xlab = "",
-     ylab = "",
-     xaxt = "n", 
-     yaxt = "n")
-
-lines(dat$y ~ dat$soil, col = "darkblue", lwd = 2)
-polygon(c(dat$soil, rev(dat$soil)), c(dat$upper, rev(dat$lower)),
-        col = addTrans("darkblue",30), border = NA)
-
-lines(dat2$y ~ dat2$soil, col = "magenta", lwd = 2)
-polygon(c(dat2$soil, rev(dat2$soil)), c(dat2$upper, rev(dat2$lower)),
-        col = addTrans("magenta",30), border = NA)
-
-mtext(side = 2, text = expression(paste("Diameter increment (cm year"^"-1", ")")), 
-      line = 2.7, cex = 1.8)
-
-axis(side =1, cex.axis = 1.5,at = c(-1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2),
-     labels = c(NA, -1, NA, 0, NA, 1, NA, 2))
-axis(side =2, cex.axis = 1.5)
-
-legend("topright", legend = c("2006-2011", "2011-2016"), col = c("darkblue", "magenta"),
-       lty = 1)
-
-text(x = -1, y = 0.35, labels = "(a)", cex = 1.4)
-
-#----------------
-# panel for mortality, PC1
-
-
-eff <- Effect(focal.predictors = c("PC1"), 
-              mod = mort_ft_ci_soils_glm_2011, xlevels = 100,
-              partial.residuals = TRUE,
-              se = TRUE)
-
-y <- eff$fit
-x <- eff[["x"]]$PC1
-x.fit <- eff[["x.all"]]$PC1
-
-# fitted <- y[closest(x.fit, x)]
-# resids <- eff$residuals + fitted
-# # exp_resids <- exp(resids)
-# 
-# resid_df <- data.frame(x.fit,
-#                        resids)
-
-e1_r_agg <- aggregate(resid_df, by = list(resid_df$x.fit), FUN = mean)[, c(2,3)]
-e1_r_agg[, 3] <- aggregate(resid_df, by = list(resid_df$x.fit), FUN = se)[, 3]
-names(e1_r_agg) <- c("x.fit", "mean_part_resids", "se_resids")
-e1_r_agg$low <- e1_r_agg$mean_part_resids - e1_r_agg$se_resids
-e1_r_agg$high <- e1_r_agg$mean_part_resids + e1_r_agg$se_resids
-# e1_r_agg$exp_low <- exp(e1_r_agg$mean_part_resids - e1_r_agg$se_resids)
-# e1_r_agg$exp_high <- exp(e1_r_agg$mean_part_resids + e1_r_agg$se_resids)
-# e1_r_agg$exp_mean_resids <- exp(e1_r_agg[, 2])
-
-
-eff2 <- Effect(focal.predictors = c("PC1"), 
-               mod = mort_ft_ci_soils_glm_2016, xlevels = 100,
-               partial.residuals = TRUE,
-               se = TRUE)
-
-dat <- data.frame(y = inv.logit(eff$fit)/5,
-                  lower = inv.logit(eff$lower)/5,
-                  upper = inv.logit(eff$upper)/5,
-                  soil = eff[["x"]][["PC1"]])
-
-dat2 <- data.frame(y = inv.logit(eff2$fit)/5,
-                   lower = inv.logit(eff2$lower)/5,
-                   upper = inv.logit(eff2$upper)/5,
-                   soil = eff2[["x"]][["PC1"]])
-
-plot(x = NA, 
-     xlim = c(-1, 1.5),
-     ylim = c(0, .05),
-     xlab = "",
-     ylab = "",
-     xaxt = "n", 
-     yaxt = "n")
-
-# points(e1_r_agg$mean_part_resids ~ e1_r_agg$x.fit, 
-#        pch = 21, 
-#        bg= "darkblue",
-#        col = "darkblue")
-# arrows(y0 = e1_r_agg$low, x0 = e1_r_agg$x.fit, 
-#        y1 = e1_r_agg$high, x1 = e1_r_agg$x.fit,
-#        code = 3,
-#        angle = 90,
-#        length = 0.02,
-#        lwd = 0.5)
-
-lines(dat$y ~ dat$soil, col = "darkblue", lwd = 2)
-polygon(c(dat$soil, rev(dat$soil)), c(dat$upper, rev(dat$lower)),
-        col = addTrans("darkblue",30), border = NA)
-
-lines(dat2$y ~ dat2$soil, col = "magenta", lwd = 2)
-polygon(c(dat2$soil, rev(dat2$soil)), c(dat2$upper, rev(dat2$lower)),
-        col = addTrans("magenta",30), border = NA)
-
-mtext(side = 1, text = "Soil PC1", line = 2.7, cex = 1.8)
-mtext(side = 2, text = expression(paste("P(Mortality)")), 
-      line = 2.7, cex = 1.8)
-
-axis(side =1, cex.axis = 1.5,at = c(-1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2),
-     labels = c(NA, -1, NA, 0, NA, 1, NA, 2))
-axis(side =2, cex.axis = 1.5)
-
-legend("topright", legend = c("2006-2011", "2011-2016"), col = c("darkblue", "magenta"),
-       lty = 1)
-
-text(x = -1, y = 0.05, labels = "(c)", cex = 1.4)
-
-mtext(side = 1, line = 5, text = "pH                                      C.E.C.", cex = 1.4)
-
-# arrows(x0 = -0.8, x1 = 1.2, y0 = -0.008, y1 = -0.008, xpd = TRUE, code = 3, length = 0.125)
-
-#------------------------------
-# panel for growth, soil pc2
-
-
-eff <- Effect(focal.predictors = c("PC2"), 
-              mod = ft_ci_soils_06, xlevels = 100, transformation = list(link = log, inverse = exp),
-              partial.residuals = TRUE,
-              se = TRUE)
-
-y <- eff$fit
-x <- eff[["x"]]$PC2
-x.fit <- eff[["x.all"]]$PC2
-
-fitted <- y[closest(x.fit, x)]
-resids <- eff$residuals + fitted
-exp_resids <- exp(resids)
-
-resid_df <- data.frame(x.fit,
-                       resids)
-
-# e1_r_agg <- aggregate(resid_df, by = list(resid_df$x.fit), FUN = mean)[, c(2,3)]
-# e1_r_agg[, 3] <- aggregate(resid_df, by = list(resid_df$x.fit), FUN = se)[, 3]
-# names(e1_r_agg) <- c("x.fit", "mean_part_resids", "se_resids")
-# e1_r_agg$low <- e1_r_agg$mean_part_resids - e1_r_agg$se_resids
-# e1_r_agg$high <- e1_r_agg$mean_part_resids + e1_r_agg$se_resids
-# e1_r_agg$exp_low <- exp(e1_r_agg$mean_part_resids - e1_r_agg$se_resids)
-# e1_r_agg$exp_high <- exp(e1_r_agg$mean_part_resids + e1_r_agg$se_resids)
-# e1_r_agg$exp_mean_resids <- exp(e1_r_agg[, 2])
-
-
-eff2 <- Effect(focal.predictors = c("PC2"), 
-               mod = ft_ci_soils_11, xlevels = 100, transformation = list(link = log, inverse = exp),
-               partial.residuals = TRUE,
-               se = TRUE)
-
-dat <- data.frame(y = eff$fit,
-                  lower = eff$lower,
-                  upper = eff$upper,
-                  soil = eff[["x"]][["PC2"]])
-
-dat2 <- data.frame(y = eff2$fit,
-                   lower = eff2$lower,
-                   upper = eff2$upper,
-                   soil = eff2[["x"]][["PC2"]])
-
-plot(x = NA, 
-     xlim = c(-1.5,2),
-     ylim = c(.15, .35),
-     xlab = "",
-     ylab = "",
-     xaxt = "n", 
-     yaxt = "n")
-
-# points(e1_r_agg$exp_mean_resids ~ e1_r_agg$x.fit, 
-#        pch = 21, 
-#        bg= "darkblue",
-#        col = "darkblue")
-# arrows(y0 = e1_r_agg$exp_low, x0 = e1_r_agg$x.fit, 
-#        y1 = e1_r_agg$exp_high, x1 = e1_r_agg$x.fit,
-#        code = 3,
-#        angle = 90,
-#        length = 0.02,
-#        lwd = 0.5)
-
-lines(dat$y ~ dat$soil, col = "darkblue", lwd = 2)
-polygon(c(dat$soil, rev(dat$soil)), c(dat$upper, rev(dat$lower)),
-        col = addTrans("darkblue",30), border = NA)
-
-lines(dat2$y ~ dat2$soil, col = "magenta", lwd = 2)
-polygon(c(dat2$soil, rev(dat2$soil)), c(dat2$upper, rev(dat2$lower)),
-        col = addTrans("magenta",30), border = NA)
-
-axis(side =1, cex.axis = 1.5, at = c(-1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2),
-     labels = c(NA, -1, NA, 0, NA, 1, NA, 2))
-axis(side =2, cex.axis = 1.5)
-
-legend("topright", legend = c("2006-2011", "2011-2016"), col = c("darkblue", "magenta"),
-       lty = 1)
-
-text(x = -1.4, y = 0.35, labels = "(b)", cex = 1.4)
-
-#----------------
-# panel for mortality, PC1
-
-eff2 <- Effect(focal.predictors = c("PC2"), 
-               mod = mort_ft_ci_soils_glm_2016, xlevels = 100,
-               partial.residuals = TRUE,
-               se = TRUE)
-
-dat2 <- data.frame(y = inv.logit(eff2$fit)/5,
-                   lower = inv.logit(eff2$lower)/5,
-                   upper = inv.logit(eff2$upper)/5,
-                   soil = eff2[["x"]][["PC2"]])
-
-plot(x = NA, 
-     xlim = c(-1.5, 2),
-     ylim = c(0, .05),
-     xlab = "",
-     ylab = "",
-     xaxt = "n", 
-     yaxt = "n")
-
-# points(e1_r_agg$mean_part_resids ~ e1_r_agg$x.fit, 
-#        pch = 21, 
-#        bg= "darkblue",
-#        col = "darkblue")
-# arrows(y0 = e1_r_agg$low, x0 = e1_r_agg$x.fit, 
-#        y1 = e1_r_agg$high, x1 = e1_r_agg$x.fit,
-#        code = 3,
-#        angle = 90,
-#        length = 0.02,
-#        lwd = 0.5)
-
-lines(dat2$y ~ dat2$soil, col = "magenta", lwd = 2, lty = 2)
-polygon(c(dat2$soil, rev(dat2$soil)), c(dat2$upper, rev(dat2$lower)),
-        col = addTrans("magenta",30), border = NA)
-
-mtext(side = 1, text = "Soil PC2", line = 2.7, cex = 1.8)
-
-axis(side =1, cex.axis = 1.5,at = c(-1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2),
-     labels = c(NA, -1, NA, 0, NA, 1, NA, 2))
-axis(side =2, cex.axis = 1.5)
-
-legend("topright", legend = c("2011-2016"), col = c("magenta"),
-       lty = 2)
-
-text(x = -1.4, y = 0.05, labels = "(d)", cex = 1.4)
-
-
-
-mtext(side = 1, line = 5, text = "Fewer Bases                 More Bases", cex = 1.4)
-
-# arrows(x0 = -1.5, x1 = 2, y0 = -0.015, y1 = -0.02, xpd = TRUE, code = 3, length = 0.125)
-
-dev.off()
-
-
-#------------------------------------------------------------------------------
-# figure of soil effects for the appendix
-#------------------------------------------------------------------------------
-
-svg(filename="./plots/Figure S3 soil variables no covariates.svg", 
-    width = 6, 
-    height=6, 
-    pointsize=8)
-
-par(mar = c(2, 2, 2, 1),
-    oma = c(6,3.1,1,0),
-    mfcol = c(2,2))
-
-opar <- par()
-
-model1 <- lmer(inc_06_11 ~ poly(PC1,2)  +
-                poly(PC2,2) +  (1|Code),
-              data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))
-
-eff <- Effect(focal.predictors = c("PC1"), 
-              mod = model1, xlevels = 100,
-              partial.residuals = TRUE,
-              se = TRUE)
-
-y <- eff$fit
-x <- eff[["x"]]$PC1
-x.fit <- eff[["x.all"]]$PC1
-
-fitted <- y[closest(x.fit, x)]
-resids <- eff$residuals + fitted
-
-resid_df <- data.frame(x.fit,
-                       resids)
-
-e1_r_agg <- aggregate(resid_df, by = list(resid_df$x.fit), FUN = mean)[, c(2,3)]
-e1_r_agg[, 3] <- aggregate(resid_df, by = list(resid_df$x.fit), FUN = se)[, 3]
-names(e1_r_agg) <- c("x.fit", "mean_part_resids", "se_resids")
-e1_r_agg$low <- e1_r_agg$mean_part_resids - e1_r_agg$se_resids
-e1_r_agg$high <- e1_r_agg$mean_part_resids + e1_r_agg$se_resids
-# e1_r_agg$exp_low <- exp(e1_r_agg$mean_part_resids - e1_r_agg$se_resids)
-# e1_r_agg$exp_high <- exp(e1_r_agg$mean_part_resids + e1_r_agg$se_resids)
-# e1_r_agg$exp_mean_resids <- exp(e1_r_agg[, 2])
-
-model2 <- lmer(inc_11_16 ~ poly(PC1,2)  +
-                 poly(PC2,2) +  (1|Code),
-               data = subset(all_data, inc_11_16 >= min.growth & dg.2006.cm > 0))
-
-eff2 <- Effect(focal.predictors = c("PC1"), 
-               mod = model2, xlevels = 100,
-               partial.residuals = TRUE,
-               se = TRUE)
-
-dat <- data.frame(y = eff$fit,
-                  lower = eff$lower,
-                  upper = eff$upper,
-                  soil = eff[["x"]][["PC1"]])
-
-dat2 <- data.frame(y = eff2$fit,
-                   lower = eff2$lower,
-                   upper = eff2$upper,
-                   soil = eff2[["x"]][["PC1"]])
-
-plot(x = NA, 
-     xlim = c(-1, 1.5),
-     ylim = c(0, 0.5),
-     xlab = "",
-     ylab = "",
-     xaxt = "n", 
-     yaxt = "n")
-
-lines(dat$y ~ dat$soil, col = "darkblue", lwd = 2)
-polygon(c(dat$soil, rev(dat$soil)), c(dat$upper, rev(dat$lower)),
-        col = addTrans("darkblue",30), border = NA)
-
-lines(dat2$y ~ dat2$soil, col = "magenta", lwd = 2)
-polygon(c(dat2$soil, rev(dat2$soil)), c(dat2$upper, rev(dat2$lower)),
-        col = addTrans("magenta",30), border = NA)
-
-mtext(side = 2, text = expression(paste("Diameter increment (cm year"^"-1", ")")), 
-      line = 2.7, cex = 1.8)
-
-axis(side =1, cex.axis = 1.5,at = c(-1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2),
-     labels = c(NA, -1, NA, 0, NA, 1, NA, 2))
-axis(side =2, cex.axis = 1.5)
-
-legend("topright", legend = c("2006-2011", "2011-2016"), col = c("darkblue", "magenta"),
-       lty = 1)
-
-text(x = -1, y = 0.5, labels = "(a)", cex = 1.4)
-
-#----------------
-# panel for mortality, PC1
-
-model_mort1 <- glm(formula = Died2011 ~ poly(PC1, 2) + poly(PC2, 2), 
-                   family = binomial(link = "logit"), 
-                   data = subset(all_data, dg.2006.cm > 0))
-
-eff <- Effect(focal.predictors = c("PC1"), 
-              mod = model_mort1, xlevels = 100,
-              partial.residuals = TRUE,
-              se = TRUE)
-
-model_mort2 <- glm(formula = Died2016 ~ poly(PC1, 2) + poly(PC2, 2), 
-                   family = binomial(link = "logit"), 
-                   data = subset(all_data, dg.2011.cm > 0))
-
-eff2 <- Effect(focal.predictors = c("PC1"), 
-               mod = model_mort2, xlevels = 100,
-               partial.residuals = TRUE,
-               se = TRUE)
-
-dat <- data.frame(y = inv.logit(eff$fit)/5,
-                  lower = inv.logit(eff$lower)/5,
-                  upper = inv.logit(eff$upper)/5,
-                  soil = eff[["x"]][["PC1"]])
-
-dat2 <- data.frame(y = inv.logit(eff2$fit)/5,
-                   lower = inv.logit(eff2$lower)/5,
-                   upper = inv.logit(eff2$upper)/5,
-                   soil = eff2[["x"]][["PC1"]])
-
-plot(x = NA, 
-     xlim = c(-1, 1.5),
-     ylim = c(0, .05),
-     xlab = "",
-     ylab = "",
-     xaxt = "n", 
-     yaxt = "n")
-
-# points(e1_r_agg$mean_part_resids ~ e1_r_agg$x.fit, 
-#        pch = 21, 
-#        bg= "darkblue",
-#        col = "darkblue")
-# arrows(y0 = e1_r_agg$low, x0 = e1_r_agg$x.fit, 
-#        y1 = e1_r_agg$high, x1 = e1_r_agg$x.fit,
-#        code = 3,
-#        angle = 90,
-#        length = 0.02,
-#        lwd = 0.5)
-
-lines(dat$y ~ dat$soil, col = "darkblue", lwd = 2)
-polygon(c(dat$soil, rev(dat$soil)), c(dat$upper, rev(dat$lower)),
-        col = addTrans("darkblue",30), border = NA)
-
-lines(dat2$y ~ dat2$soil, col = "magenta", lwd = 2)
-polygon(c(dat2$soil, rev(dat2$soil)), c(dat2$upper, rev(dat2$lower)),
-        col = addTrans("magenta",30), border = NA)
-
-mtext(side = 1, text = "Soil PC1", line = 2.7, cex = 1.8)
-mtext(side = 2, text = expression(paste("P(Mortality)")), 
-      line = 2.7, cex = 1.8)
-
-axis(side =1, cex.axis = 1.5,at = c(-1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2),
-     labels = c(NA, -1, NA, 0, NA, 1, NA, 2))
-axis(side =2, cex.axis = 1.5)
-
-legend("topright", legend = c("2006-2011", "2011-2016"), col = c("darkblue", "magenta"),
-       lty = 1)
-
-text(x = -1, y = 0.05, labels = "(b)", cex = 1.4)
-
-mtext(side = 1, line = 5, text = "pH                                      C.E.C.", cex = 1.4)
-
-# arrows(x0 = -0.8, x1 = 1.2, y0 = -0.008, y1 = -0.008, xpd = TRUE, code = 3, length = 0.125)
-
-#------------------------------
-# panel for growth, soil pc2
-
-eff <- Effect(focal.predictors = c("PC2"), 
-              mod = model1, xlevels = 100, transformation = list(link = log, inverse = exp),
-              partial.residuals = TRUE,
-              se = TRUE)
-
-eff2 <- Effect(focal.predictors = c("PC2"), 
-               mod = model2, xlevels = 100, transformation = list(link = log, inverse = exp),
-               partial.residuals = TRUE,
-               se = TRUE)
-
-dat <- data.frame(y = eff$fit,
-                  lower = eff$lower,
-                  upper = eff$upper,
-                  soil = eff[["x"]][["PC2"]])
-
-dat2 <- data.frame(y = eff2$fit,
-                   lower = eff2$lower,
-                   upper = eff2$upper,
-                   soil = eff2[["x"]][["PC2"]])
-
-plot(x = NA, 
-     xlim = c(-1.5,2),
-     ylim = c(.15, .35),
-     xlab = "",
-     ylab = "",
-     xaxt = "n", 
-     yaxt = "n")
-
-# points(e1_r_agg$exp_mean_resids ~ e1_r_agg$x.fit, 
-#        pch = 21, 
-#        bg= "darkblue",
-#        col = "darkblue")
-# arrows(y0 = e1_r_agg$exp_low, x0 = e1_r_agg$x.fit, 
-#        y1 = e1_r_agg$exp_high, x1 = e1_r_agg$x.fit,
-#        code = 3,
-#        angle = 90,
-#        length = 0.02,
-#        lwd = 0.5)
-
-lines(dat$y ~ dat$soil, col = "darkblue", lwd = 2)
-polygon(c(dat$soil, rev(dat$soil)), c(dat$upper, rev(dat$lower)),
-        col = addTrans("darkblue",30), border = NA)
-
-lines(dat2$y ~ dat2$soil, col = "magenta", lwd = 2)
-polygon(c(dat2$soil, rev(dat2$soil)), c(dat2$upper, rev(dat2$lower)),
-        col = addTrans("magenta",30), border = NA)
-
-axis(side =1, cex.axis = 1.5, at = c(-1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2),
-     labels = c(NA, -1, NA, 0, NA, 1, NA, 2))
-axis(side =2, cex.axis = 1.5)
-
-legend("topright", legend = c("2006-2011", "2011-2016"), col = c("darkblue", "magenta"),
-       lty = 1)
-
-text(x = -1.4, y = 0.35, labels = "(b)", cex = 1.4)
-
-#----------------
-# panel for mortality, PC1
-
-eff <- Effect(focal.predictors = c("PC2"), 
-              mod = model_mort1, xlevels = 100,
-              partial.residuals = TRUE,
-              se = TRUE)
-
-eff2 <- Effect(focal.predictors = c("PC2"), 
-               mod = model_mort2, xlevels = 100,
-               partial.residuals = TRUE,
-               se = TRUE)
-
-dat <- data.frame(y = inv.logit(eff$fit)/5,
-                  lower = inv.logit(eff$lower)/5,
-                  upper = inv.logit(eff$upper)/5,
-                  soil = eff[["x"]][["PC2"]])
-
-dat2 <- data.frame(y = inv.logit(eff2$fit)/5,
-                   lower = inv.logit(eff2$lower)/5,
-                   upper = inv.logit(eff2$upper)/5,
-                   soil = eff2[["x"]][["PC2"]])
-
-plot(x = NA, 
-     xlim = c(-1.5, 2),
-     ylim = c(0, .05),
-     xlab = "",
-     ylab = "",
-     xaxt = "n", 
-     yaxt = "n")
-
-lines(dat$y ~ dat$soil, col = "darkblue", lwd = 2)
-polygon(c(dat$soil, rev(dat$soil)), c(dat$upper, rev(dat$lower)),
-        col = addTrans("darkblue",30), border = NA)
-
-
-lines(dat2$y ~ dat2$soil, col = "magenta", lwd = 2)
-polygon(c(dat2$soil, rev(dat2$soil)), c(dat2$upper, rev(dat2$lower)),
-        col = addTrans("magenta",30), border = NA)
-
-mtext(side = 1, text = "Soil PC2", line = 2.7, cex = 1.8)
-
-axis(side =1, cex.axis = 1.5,at = c(-1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2),
-     labels = c(NA, -1, NA, 0, NA, 1, NA, 2))
-axis(side =2, cex.axis = 1.5)
-
-legend("topright", legend = c("2006-2011", "2011-2016"), col = c("darkblue", "magenta"),
-       lty = 1)
-
-text(x = -1.4, y = 0.05, labels = "(d)", cex = 1.4)
-
-
-
-mtext(side = 1, line = 5, text = "Fewer Bases                 More Bases", cex = 1.4)
-
-# arrows(x0 = -1.5, x1 = 2, y0 = -0.015, y1 = -0.02, xpd = TRUE, code = 3, length = 0.125)
-
-dev.off()
-
-
-#------------------------------------------------------------------------------
-# Figure 4 
-# Growth ~ diam by FT
-#------------------------------------------------------------------------------
-tiff(filename="./plots/Figure 4 differences in growth by fg.tiff",
-     type = "cairo",
-     antialias = "gray",
-     compression = "lzw",
-     units="in",
-     width = 6,
-     height=3,
-     pointsize=7,
-     res=600)
-
-par(mar = c(5.1, 5.1, 2, 1),
-    mfrow = c(1,2))
-
-get_predictions <- function(model, diam_name){
-  eff <- Effect(focal.predictors = c(diam_name, "C.Cerrado..G.generalist."),
-                mod = model, xlevels = 100,
-                partial.residuals = TRUE)
-  
-  y <- eff$fit
-  x <- eff[["x"]][[diam_name]]
-  x.fit <- eff[["x.all"]][[diam_name]]
-  fg <- eff[["x.all"]]$"C.Cerrado..G.generalist."
-  
-  data_orig <- data.frame(x.fit,
-                          fg)
-  
-  #make sure we match the correct line
-  fitted <- ifelse(data_orig$fg == "C", y[1:100][closest(x.fit, x[1:100])],
-                   y[101:200][closest(x.fit, x[101:200])])
-  
-  # resids <- eff$residuals + fitted
-  # exp_resids <- exp(resids)
-  
-  dat <- data.frame(y = eff$fit,
-                    lower = eff$lower,
-                    upper = eff$upper,
-                    diam = eff[["x"]][[diam_name]],
-                    fg = eff[["x"]][["C.Cerrado..G.generalist."]])
-return(dat)
-}
-
-dat1 <- get_predictions(ft_ci_soils_06, "dg.2006.cm")
-dat2 <- get_predictions(ft_ci_soils_11, "dg.2011.cm")
-
-plot(x = NA,
-     xlim = c(5, 60),
-     ylim = c(0.05, 0.4),
-     xlab = "",
-     ylab = "",
-     xaxt = "n",
-     yaxt = "n")
-
-dat_sub <- dat1[dat1$fg == "G", ]
-lines(dat_sub$y ~ dat_sub$diam, col = "#1b9e77", lwd = 2)
-polygon(c(dat_sub$diam, rev(dat_sub$diam)), c(dat_sub$upper, rev(dat_sub$lower)),
-        col = addTrans("#1b9e77",20), border = NA)
-
-dat_sub <- dat1[dat1$fg == "C", ]
-lines(dat_sub$y ~ dat_sub$diam, col = "#d95f02", lwd = 2)
-polygon(c(dat_sub$diam, rev(dat_sub$diam)), c(dat_sub$upper, rev(dat_sub$lower)),
-        col = addTrans("#d95f02",20), border = NA)
-
-dat_sub <- dat2[dat2$fg == "G", ]
-lines(dat_sub$y ~ dat_sub$diam, col = "#1b9e77", lwd = 2, lty = 2)
-polygon(c(dat_sub$diam, rev(dat_sub$diam)), c(dat_sub$upper, rev(dat_sub$lower)),
-        col = addTrans("#1b9e77",20), border = NA)
-
-dat_sub <- dat2[dat2$fg == "C", ]
-lines(dat_sub$y ~ dat_sub$diam, col = "#d95f02", lwd = 2, lty = 2)
-polygon(c(dat_sub$diam, rev(dat_sub$diam)), c(dat_sub$upper, rev(dat_sub$lower)),
-        col = addTrans("#d95f02",20), border = NA)
-
-mtext(side = 1, text = "Diameter (cm)", line = 2.7, cex = 1.8)
-mtext(side = 2, text = expression(paste("Diameter increment (cm year"^"-1", ")")),
-      line = 2.7, cex = 1.8)
-
-axis(side =1, cex.axis = 1.5)
-axis(side =2, cex.axis = 1.5)
-
-text(x = 8, y = 0.387, labels = "(a)", cex = 1.5)
-
-
-
-# growth by BA above
-
-get_predictions_ba <- function(model, ba_name){
-  eff <- Effect(focal.predictors = c(ba_name, "C.Cerrado..G.generalist."),
-                mod = model, xlevels = 100,
-                partial.residuals = TRUE)
-  
-  y <- eff$fit
-  x <- eff[["x"]][[ba_name]]
-  x.fit <- eff[["x.all"]][[ba_name]]
-  fg <- eff[["x.all"]]$"C.Cerrado..G.generalist."
-  
-  data_orig <- data.frame(x.fit,
-                          fg)
-  
-  #make sure we match the correct line
-  fitted <- ifelse(data_orig$fg == "C", y[1:100][closest(x.fit, x[1:100])],
-                   y[101:200][closest(x.fit, x[101:200])])
-  
-  # resids <- eff$residuals + fitted
-  # exp_resids <- exp(resids)
-  
-  dat <- data.frame(y = eff$fit,
-                    lower = eff$lower,
-                    upper = eff$upper,
-                    ba = eff[["x"]][[ba_name]] * 10,
-                    fg = eff[["x"]][["C.Cerrado..G.generalist."]])
-  return(dat)
-}
-
-dat1 <- get_predictions_ba(ft_ci_soils_06, "BA.above2006")
-dat2 <- get_predictions_ba(ft_ci_soils_11, "BA.above2011")
-
-plot(x = NA,
-     xlim = c(0, 28),
-     ylim = c(0, 0.6),
-     xlab = "",
-     ylab = "",
-     xaxt = "n",
-     yaxt = "n")
-
-dat_sub <- dat1[dat1$fg == "G", ]
-lines(dat_sub$y ~ dat_sub$ba, col = "#1b9e77", lwd = 2)
-polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
-        col = addTrans("#1b9e77",20), border = NA)
-
-dat_sub <- dat1[dat1$fg == "C", ]
-lines(dat_sub$y ~ dat_sub$ba, col = "#d95f02", lwd = 2)
-polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
-        col = addTrans("#d95f02",20), border = NA)
-
-dat_sub <- dat2[dat2$fg == "G", ]
-lines(dat_sub$y ~ dat_sub$ba, col = "#1b9e77", lwd = 2, lty = 2)
-polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
-        col = addTrans("#1b9e77",20), border = NA)
-
-dat_sub <- dat2[dat2$fg == "C", ]
-lines(dat_sub$y ~ dat_sub$ba, col = "#d95f02", lwd = 2, lty = 2)
-polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
-        col = addTrans("#d95f02",20), border = NA)
-
-mtext(side = 1, text = expression(paste("BA above (m"^"2"," ha"^"-1",")")), line = 3.1, cex = 1.8)
-mtext(side = 2, text = expression(paste("Diameter increment (cm year"^"-1", ")")),
-      line = 2.7, cex = 1.8)
-
-axis(side =1, cex.axis = 1.5)
-axis(side =2, cex.axis = 1.5)
-
-
-legend("topright", legend = c("Generalist species, 2006", "Generalist species, 2011", "Savanna species, 2006", "Savanna species, 2011"), col = c("#1b9e77", "#1b9e77", "#d95f02", "#d95f02"),
-       lty = c(1, 2, 1, 2))
-
-
-text(x = 1.7, y = 0.58, labels = "(b)", cex = 1.5)
-
-dev.off()
-
-#------------------------------------------------------------------------------
-# Figure 6
-# Mortality ~ BA by FT
-#------------------------------------------------------------------------------
-eff <- Effect(focal.predictors = c("BA.above2006", "C.Cerrado..G.generalist."), 
-              mod = mort_ft_ci_soils_glm_2011, xlevels = 100)
-eff2 <- Effect(focal.predictors = c("BA.above2011", "C.Cerrado..G.generalist."),
-              mod = mort_ft_ci_soils_glm_2016, xlevels = 100)
-
-
-tiff(filename="./plots/Figure 6 mortality_ba_above_by_fg.tiff", 
-     type = "cairo",
-     antialias = "gray",
-     compression = "lzw",
-     units="in", 
-     width = 3, 
-     height=3, 
-     pointsize=7, 
-     res=600)
-
-dat1 <- data.frame(y = inv.logit(eff$fit)/5,
-                   lower = inv.logit(eff$lower)/5,
-                   upper = inv.logit(eff$upper)/5,
-                   ba = eff[["x"]][["BA.above2006"]]*10,
-                   fg = eff[["x"]][["C.Cerrado..G.generalist."]])
-
-dat2 <- data.frame(y = inv.logit(eff2$fit)/5,
-                   lower = inv.logit(eff2$lower)/5,
-                   upper = inv.logit(eff2$upper)/5,
-                   ba = eff2[["x"]][["BA.above2011"]]*10,
-                   fg = eff2[["x"]][["C.Cerrado..G.generalist."]])
-
-par(mar = c(5.1, 5.1, 2, 1))
-
-plot(x = NA, 
-     xlim = c(0, 30),
-     ylim = c(0, 0.12),
-     xlab = "",
-     ylab = "",
-     xaxt = "n", 
-     yaxt = "n")
-
-dat_sub <- dat1[dat1$fg == "G", ]
-lines(dat_sub$y ~ dat_sub$ba, col = "#1b9e77", lwd = 2)
-polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
-        col = addTrans("#1b9e77",30), border = NA)
-
-dat_sub <- dat1[dat1$fg == "C", ]
-lines(dat_sub$y ~ dat_sub$ba, col = "#d95f02", lwd = 2)
-polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
-        col = addTrans("#d95f02",30), border = NA)
-
-dat_sub <- dat2[dat2$fg == "G", ]
-lines(dat_sub$y ~ dat_sub$ba, col = "#1b9e77", lwd = 2, lty = 2)
-polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
-        col = addTrans("#1b9e77",30), border = NA)
-
-dat_sub <- dat2[dat2$fg == "C", ]
-lines(dat_sub$y ~ dat_sub$ba, col = "#d95f02", lwd = 2, lty = 2)
-polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
-        col = addTrans("#d95f02",30), border = NA)
-
-mtext(side = 1, text = expression(paste("BA above (m"^"2"," ha"^"-1",")")), line = 3.1, cex = 1.8)
-mtext(side = 2, text = expression(paste("p(mortality)")), 
-      line = 2.7, cex = 1.8)
-
-axis(side =1, cex.axis = 1.5)
-axis(side =2, cex.axis = 1.5)
-
-legend("topleft", legend = c("Generalist species, 2006", "Generalist species, 2011", "Savanna species, 2006", "Savanna species, 2011"), col = c("#1b9e77", "#1b9e77", "#d95f02", "#d95f02"),
-       lty = c(1, 2, 1, 2))
-
-
-dev.off()
-
-#------------------------------------------------------------------------------
-# Version with just one model
-#------------------------------------------------------------------------------
-# eff <- Effect(focal.predictors = c("BA.above2006", "C.Cerrado..G.generalist."), 
-#               mod = mort_ft_ci_soils_glm_died_all, xlevels = 100)
-# 
-# 
-# tiff(filename="./plots/Figure 6 mortality_ba_above_by_fg.tiff", 
-#      type = "cairo",
-#      antialias = "gray",
-#      compression = "lzw",
-#      units="in", 
-#      width = 3, 
-#      height=3, 
-#      pointsize=7,
-#      res=600)
-# 
-# dat1 <- data.frame(y = 1 - (1 - inv.logit(eff$fit))^(1/10),
-#                    lower = 1 - (1-inv.logit(eff$lower))^(1/10),
-#                    upper = 1 - (1-inv.logit(eff$upper))^(1/10),
-#                    ba = eff[["x"]][["BA.above2006"]]*10,
-#                    fg = eff[["x"]][["C.Cerrado..G.generalist."]])
-# 
-# par(mar = c(1,7,1,1),
-#     oma = c(5,0,0,0),
-#     ps = 9,
-#     cex = 1,
-#     yaxs = "i",
-#     xaxs = "i")
-# 
-# plot(x = NA, 
-#      xlim = c(0, 30),
-#      ylim = c(-0.03, 0.18),
-#      xlab = "",
-#      ylab = "",
-#      xaxt = "n", 
-#      yaxt = "n")
-# 
-# dat_sub <- dat1[dat1$fg == "G", ]
-# lines(dat_sub$y ~ dat_sub$ba, col = "#1b9e77", lwd = 2)
-# polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
-#         col = addTrans("#1b9e77",30), border = NA)
-# 
-# dat_sub <- dat1[dat1$fg == "C", ]
-# lines(dat_sub$y ~ dat_sub$ba, col = "#d95f02", lwd = 2)
-# polygon(c(dat_sub$ba, rev(dat_sub$ba)), c(dat_sub$upper, rev(dat_sub$lower)),
-#         col = addTrans("#d95f02",30), border = NA)
-# 
-# 
-# mtext(side = 1, text = expression(paste("BA above (m"^"2"," ha"^"-1",")")), line = 3.1, cex = 1.8)
-# mtext(side = 2, text = expression(paste("p(mortality)")), 
-#       line = 2.7, cex = 1.8)
-# 
-# axis(side =1, cex.axis = 1.5)
-# axis(side =2, cex.axis = 1.5, at = c(0, 0.05, .1, .15))
-# 
-# abline(h = 0)
-# abline(h = 0.15)
-# 
-# legend(x = 0, y = 0.15, legend = c("Generalist species", "Savanna species"), 
-#        col = c("#1b9e77", "#d95f02"),
-#        lty = c(1, 1))
-# 
-# h <- density(all_data[all_data$Died_all == "y" & all_data$C.Cerrado..G.generalist. == "C" & 
-#                         !is.na(all_data$BA.above2006), "BA.above2006"]*10, na.rm = TRUE)
-# h$y <- 0.18 - h$y/4
-# lines(h, col = c("#d95f02"))
-# 
-# h <- density(all_data[all_data$Died_all == "n" & all_data$C.Cerrado..G.generalist. == "C" & 
-#                         !is.na(all_data$BA.above2006), "BA.above2006"]*10, na.rm = TRUE)
-# h$y <- -0.03 + h$y/4
-# lines(h, col = c("#d95f02"))
-# 
-# h <- density(all_data[all_data$Died_all == "y" & all_data$C.Cerrado..G.generalist. == "G" & 
-#                         !is.na(all_data$BA.above2006), "BA.above2006"]*10, na.rm = TRUE)
-# h$y <- 0.18 - h$y/4
-# lines(h, col = c("#1b9e77"))
-# 
-# h <- density(all_data[all_data$Died_all == "n" & all_data$C.Cerrado..G.generalist. == "G" & 
-#                         !is.na(all_data$BA.above2006), "BA.above2006"]*10, na.rm = TRUE)
-# h$y <- -0.03 + h$y/4
-# lines(h, col = c("#1b9e77"))
-# 
-# 
-# dev.off()
-
-#------------------------------------------------------------------------------
-# Supplemental Figure S2
-# Size-growth relationship without accounting for covariates
-#------------------------------------------------------------------------------
-tiff(filename="./plots/Figure S2 diameter effect plot.tiff", 
-     type = "cairo",
-     antialias = "gray",
-     compression = "lzw",
-     units="in", 
-     width = 3, 
-     height=3, 
-     pointsize=7, 
-     res=600)
-
-par(mar = c(5.1, 5.1, 2, 1))
-
-model1 <- lmer(inc_06_11 ~ 
-                 scale(log(dg.2006.cm)) +
-                 scale(TBA.2006.m2ha.1) * C.Cerrado..G.generalist. +
-                 poly(PC1, 2) + poly(PC2, 2) +
-                 (1|Code), data = subset(all_data, inc_06_11 >= min.growth & dg.2006.cm > 0))
-model2 <- lmer(inc_11_16 ~ scale(log(dg.2011.cm)) +
-                 scale(TBA.2011.m2.ha.1) * C.Cerrado..G.generalist. +
-                 poly(PC1, 2) + poly(PC2, 2) + (1|Code), 
-               data = subset(all_data, inc_11_16 >= min.growth & dg.2011.cm > 0))
-eff <- Effect(focal.predictors = c("dg.2006.cm"), 
-              mod = model1, xlevels = 100)
-dat <- data.frame(y = eff$fit,
-                  lower = eff$lower,
-                  upper = eff$upper,
-                  diam = eff[["x"]][["dg.2006.cm"]])
-eff <- Effect(focal.predictors = c("dg.2011.cm"), 
-              mod = model2, xlevels = 100)
-dat2 <- data.frame(y = eff$fit,
-                   lower = eff$lower,
-                   upper = eff$upper,
-                   diam = eff[["x"]][["dg.2011.cm"]])
-
-plot(x = NA, 
-     xlim = c(0, 55),
-     ylim = c(0.1, 0.5),
-     xlab = "",
-     ylab = "",
-     xaxt = "n", 
-     yaxt = "n")
-
-lines(dat$y ~ dat$diam, col = "darkblue", lwd = 2)
-polygon(c(dat$diam, rev(dat$diam)), c(dat$upper, rev(dat$lower)),
-        col = addTrans("darkblue",30), border = NA)
-
-lines(dat2$y ~ dat2$diam, col = "magenta", lwd = 2)
-polygon(c(dat2$diam, rev(dat2$diam)), c(dat2$upper, rev(dat2$lower)),
-        col = addTrans("magenta",30), border = NA)
-
-mtext(side = 1, text = "Original diameter (cm)", line = 2.7, cex = 1.8)
-mtext(side = 2, text = expression(paste("Diameter increment (cm year"^"-1", ")")), 
-      line = 2.7, cex = 1.8)
-
-axis(side =1, cex.axis = 1.5)
-axis(side =2, cex.axis = 1.5)
-
-legend("topright", legend = c("2006-2011", "2011-2016"), col = c("darkblue", "magenta"),
-       lty = 1)
-
-dev.off()
-
-
-#------------------------------------------------------------------------------
-# Figure 2
-# Basal area increment by functional type
-#------------------------------------------------------------------------------
-change_2006 <- data.frame(Plot = unique(tree_data$Plot),
-                     BA_s = numeric(length(unique(tree_data$Plot))),
-                     BA_g = numeric(length(unique(tree_data$Plot))),
-                     BA_total = numeric(length(unique(tree_data$Plot))),
-                     BA_s_died = numeric(length(unique(tree_data$Plot))),
-                     BA_g_died = numeric(length(unique(tree_data$Plot)))
-                     )
-change_2011 <- change_2006
-change_2016 <- change_2006
-change_live <- data.frame(Plot = unique(tree_data$Plot),
-                          s_2016 = numeric(length(unique(tree_data$Plot))),
-                          s_2006 = numeric(length(unique(tree_data$Plot))),
-                          g_2016 = numeric(length(unique(tree_data$Plot))),
-                          g_2006 = numeric(length(unique(tree_data$Plot)))
-                          )
-
-
-#sum the basal area by each functional type
-for(plot in unique(tree_data$Plot)){
-  temp <- tree_data[tree_data$Plot == plot, ]
-  change_2006[change_2006$Plot == plot, ]$BA_s <- sum((((temp[temp$C.Cerrado..G.generalist. == "C", "dg.2006.cm"]/2)^2)*pi), na.rm = TRUE)/10000
-  change_2006[change_2006$Plot == plot, ]$BA_g <- sum((((temp[temp$C.Cerrado..G.generalist. == "G", "dg.2006.cm"]/2)^2)*pi), na.rm = TRUE)/10000
-  change_2006[change_2006$Plot == plot, ]$BA_total <- change_2006[change_2006$Plot == plot, ]$BA_s + change_2006[change_2006$Plot == plot, ]$BA_g
-  change_2006[change_2006$Plot == plot, ]$BA_s_died <- NA
-  change_2006[change_2006$Plot == plot, ]$BA_g_died <- NA
-  
-  
-  change_2011[change_2011$Plot == plot, ]$BA_s <- sum((((temp[temp$C.Cerrado..G.generalist. == "C", "dg.2011.cm"]/2)^2)*pi), na.rm = TRUE)/10000
-  change_2011[change_2011$Plot == plot, ]$BA_g <- sum((((temp[temp$C.Cerrado..G.generalist. == "G", "dg.2011.cm"]/2)^2)*pi), na.rm = TRUE)/10000
-  change_2011[change_2011$Plot == plot, ]$BA_total <- change_2011[change_2011$Plot == plot, ]$BA_s + change_2011[change_2011$Plot == plot, ]$BA_g
-  change_2011[change_2011$Plot == plot, ]$BA_s_died <- sum((((temp[temp$C.Cerrado..G.generalist. == "C" & temp$Died2011 == "y", "dg.2006.cm"]/2)^2)*pi), na.rm = TRUE)/10000
-  change_2011[change_2011$Plot == plot, ]$BA_g_died <- sum((((temp[temp$C.Cerrado..G.generalist. == "G"& temp$Died2011 == "y", "dg.2006.cm"]/2)^2)*pi), na.rm = TRUE)/10000
-  
-  
-  change_2016[change_2016$Plot == plot, ]$BA_s <- sum((((temp[temp$C.Cerrado..G.generalist. == "C", "dg.2016.cm"]/2)^2)*pi), na.rm = TRUE)/10000
-  change_2016[change_2016$Plot == plot, ]$BA_g <- sum((((temp[temp$C.Cerrado..G.generalist. == "G", "dg.2016.cm"]/2)^2)*pi), na.rm = TRUE)/10000
-  change_2016[change_2016$Plot == plot, ]$BA_total <- change_2016[change_2016$Plot == plot, ]$BA_s + change_2016[change_2016$Plot == plot, ]$BA_g
-  change_2016[change_2016$Plot == plot, ]$BA_s_died <- sum((((temp[temp$C.Cerrado..G.generalist. == "C" & temp$Died2016 == "y", "dg.2011.cm"]/2)^2)*pi), na.rm = TRUE)/10000
-  change_2016[change_2016$Plot == plot, ]$BA_g_died <- sum((((temp[temp$C.Cerrado..G.generalist. == "G"& temp$Died2016 == "y", "dg.2011.cm"]/2)^2)*pi), na.rm = TRUE)/10000
-  
-  change_live[change_live$Plot == plot, ]$s_2016 <- sum((((temp[temp$C.Cerrado..G.generalist. == "C" & temp$Died2016 != "y" & temp$Died2011 != "y", 
-                                     "dg.2016.cm"]/2)^2)*pi), na.rm = TRUE)/10000
-  change_live[change_live$Plot == plot, ]$g_2016 <- sum((((temp[temp$C.Cerrado..G.generalist. == "G" & temp$Died2016 != "y" & temp$Died2011 != "y", 
-                                     "dg.2016.cm"]/2)^2)*pi), na.rm = TRUE)/10000
-  change_live[change_live$Plot == plot, ]$s_2006 <- sum((((temp[temp$C.Cerrado..G.generalist. == "C" & temp$Died2016 != "y" & temp$Died2011 != "y", 
-                                          "dg.2006.cm"]/2)^2)*pi), na.rm = TRUE)/10000
-  change_live[change_live$Plot == plot, ]$g_2006 <- sum((((temp[temp$C.Cerrado..G.generalist. == "G" & temp$Died2016 != "y" & temp$Died2011 != "y", 
-                                         "dg.2006.cm"]/2)^2)*pi), na.rm = TRUE)/10000
+                         poly(PC1, 2) + poly(PC2, 2) +
+                         (1|Code),
+                       data = data_11)
+
+nyear <- 20
+c_growth <- data.frame(year = numeric(nyear),
+                       height = numeric(nyear))
+
+  height <- mean(all_data[all_data$C.Cerrado..G.generalist. == "C" & all_data$Added == 2011, ]$H.2011..m., na.rm = TRUE)
+  ft <- "C"
+  PC1 <- mean(plot_data$PC1)
+  PC2 <- mean(plot_data$PC2)
+  BA.above2011 <- 0
+for(year in 1:nyear){
+  newdat <- data.frame(height = height,
+                       C.Cerrado..G.generalist. = ft,
+                       PC1 = PC1,
+                       PC2 = PC2,
+                       BA.above2011 = BA.above2011)
+  growth <- predict(ft_ci_soils_11_ht, newdata = newdat, re.form = NA)
+  height <- height + growth
+  c_growth$year[year] <- year
+  c_growth$height[year] <- height
   
 }
 
-change_ba <- data.frame(Plot = change_2006$Plot,
-                        ba_tot_2006 = change_2006$BA_total,
-                        ba_inc_s = change_2016$BA_s - change_2006$BA_s,
-                        ba_inc_g = change_2016$BA_g - change_2006$BA_g,
-                        ba_died_s = -(change_2011$BA_s_died + change_2016$BA_s_died),
-                        ba_died_g = -(change_2011$BA_g_died + change_2016$BA_g_died),
-                        ba_inc_s_w_dead = change_2016$BA_s - change_2006$BA_s + change_2011$BA_s_died + change_2016$BA_s_died,
-                        ba_inc_g_w_dead = change_2016$BA_g - change_2006$BA_g + change_2011$BA_g_died + change_2016$BA_g_died,
-                        ba_live_s = change_live$s_2016 - change_live$s_2006,
-                        ba_live_g = change_live$g_2016 - change_live$g_2006
-                        )
+g_growth <- data.frame(year = numeric(nyear),
+                       height = numeric(nyear))
 
-change_ba_prop <- change_ba
-change_ba_prop[, c(3, 5, 7, 9)] <- change_ba_prop[, c(3,5,7,9)]/change_2006$BA_s
-change_ba_prop[, c(4, 6, 8, 10)] <- change_ba_prop[, c(4,6,8,10)]/change_2006$BA_g
+  height <- mean(all_data[all_data$C.Cerrado..G.generalist. == "G" & all_data$Added == 2011, ]$H.2011..m., na.rm = TRUE)
+  ft <- "G"
+  PC1 <- mean(plot_data$PC1)
+  PC2 <- mean(plot_data$PC2)
+  BA.above2011 <- 0
+for(year in 1:nyear){
+  newdat <- data.frame(height = height,
+                       C.Cerrado..G.generalist. = ft,
+                       PC1 = PC1,
+                       PC2 = PC2,
+                       BA.above2011 = BA.above2011)
+  growth <- predict(ft_ci_soils_11_ht, newdata = newdat, re.form = NA)
+  height <- height + growth
+  g_growth$year[year] <- year
+  g_growth$height[year] <- height
+}
 
-#make three-panel figure
+plot(c_growth$height ~ c_growth$year, type = "l", ylim = c(0,15))
+lines(g_growth$height ~ g_growth$year, lty = 2)
 
-svg(filename="./plots/Figure 1 change in basal area proportional.svg",
-     width = 3.6, 
-     height=8, 
-     pointsize=7) 
+#-------------------------------------------------------------------------------
+# simulating a whole stand
 
+recruits <- data_11 %>%
+  dplyr::filter(Added == 2011 & !is.na(height) & !is.na(diam))
 
-par(mar = c(1,7,1,1),
-    oma = c(5,0,0,0),
-    mfrow = c(3,1),
-    ps = 9,
-    cex = 1,
-    yaxs = "i")
+new_stand <- data.frame(Current.number = character(),
+                        Year = numeric(),
+                        height = numeric(),
+                        C.Cerrado..G.generalist. = character(),
+                        diam = numeric(),
+                        PC1 = numeric(),
+                        PC2 = numeric(),
+                        BA.above2011 = numeric())
+BAtot <- 0
 
-new <- data.frame(ba_tot_2006 = seq(0.5, 2.5, length.out = 100))
+while(BAtot < 5){
+  c_tree <- recruits[recruits$C.Cerrado..G.generalist. == "C", ] %>%
+    '['(sample(nrow(.), 1), ) %>% #this might be clunky, but it selects one row at random
+    dplyr::select(Current.number, height, C.Cerrado..G.generalist., diam) %>%
+    dplyr::mutate(PC1 = mean(plot_data$PC1),
+                  PC2 = mean(plot_data$PC2),
+                  BA.above2011 = 0,
+                  Year = 0) %>%
+    dplyr::mutate(height = height + rnorm(n = nrow(c_tree), mean = 0, sd = 0.02))
+  g_tree <- recruits[recruits$C.Cerrado..G.generalist. == "G", ] %>%
+    '['(sample(nrow(.), 1), ) %>%
+    dplyr::select(Current.number, height, C.Cerrado..G.generalist., diam) %>%
+    dplyr::mutate(PC1 = mean(plot_data$PC1),
+                  PC2 = mean(plot_data$PC2),
+                  BA.above2011 = 0,
+                  Year = 0) %>%
+    dplyr::mutate(height = height + rnorm(n = nrow(g_tree), mean = 0, sd = 0.02))
+  
+  new_stand <- dplyr::bind_rows(new_stand, c_tree, g_tree)
+  
+  BAtot <- sum((new_stand$diam / 2)^2 * pi) / 10000 #convert to m^2 
+  BAtot <- BAtot * 10 #convert to equivalent BA for a 0.1-ha plot
+  
+}
 
-plot(NA,
-     ylim = c(-0.7, 1.8),
-     xlim = c(0.4, 2.6),
-     xlab = expression(paste("Original basal area (m"^2, " ha"^-1, ")")),
-     ylab = expression(paste("Net change in basal area (%)")),
-     xaxt = "n",
-     yaxt = "n",
-     cex.lab = 1.2)
+for(i in 1:nrow(new_stand)){
+  new_stand$BA.above2011[i] <- sum(((new_stand[new_stand$height >= new_stand$height[i], "diam"]/2)^2 * pi), na.rm = TRUE) / 10000
+}
 
-abline(h = 0)
+stand_data <- new_stand
+nyear <- 20
+for(year in 1:nyear){
+  height_inc <- predict(ft_ci_soils_11_ht, newdata = stand_data[stand_data$Year == (year - 1), ], re.form = NA)
+  diam_inc <- predict(ft_ci_soils_11_diam, newdata = stand_data[stand_data$Year == (year - 1), ], re.form = NA)
 
-points(ba_inc_s ~ ba_tot_2006, data = change_ba_prop, 
-       pch = 21,
-       col = "#d95f02",
-       bg = "#d95f02")
+  update <- stand_data[stand_data$Year == (year - 1), ] %>%
+    mutate(Year = year,
+           height = height + height_inc,
+           diam = diam + diam_inc)
+  
+  for(i in 1:nrow(update)){
+    update$BA.above2011[i] <- sum((update[update$height >= update$height[i], "diam"]/2)^2 * pi, na.rm = TRUE) / 10000
+  }
+  
+  stand_data <- dplyr::bind_rows(stand_data, update)
+}
 
-mod <- lm(log(ba_inc_s + 1) ~ log(ba_tot_2006), data = change_ba_prop)
-pred <- predict(mod, newdata = new)
-lines(exp(pred) - 1 ~ new$ba_tot_2006,
-      col = "#d95f02",
-      lty = 1)
+ggplot(stand_data, aes(x = Year, y = height)) + 
+  geom_jitter(aes(col = C.Cerrado..G.generalist.)) +
+  stat_smooth(aes(col = C.Cerrado..G.generalist.), method = "loess")
 
+ggplot(stand_data, aes(x = Year, y = diam)) + 
+  geom_jitter(aes(col = C.Cerrado..G.generalist.)) +
+  stat_smooth(aes(col = C.Cerrado..G.generalist.), method = "loess")
 
-points(ba_inc_g ~ ba_tot_2006, data = change_ba_prop, 
-       pch = 22,
-       col = "#1b9e77",
-       bg = "#1b9e77")
-mod <- lm(log(ba_inc_g + 1) ~ log(ba_tot_2006), data = change_ba_prop)
-pred <- predict(mod, newdata = new)
-lines(exp(pred) - 1 ~ new$ba_tot_2006,
-      col = "#1b9e77",
-      lty = 1)
-
-axis(side = 2, at = pretty(c(-0.7, 1.8)), labels = pretty(c(-0.7, 1.8))*100)
-axis(side = 1, at = pretty(change_ba$ba_tot_2006), labels = NA)
-
-legend(x = 0.5, y = -0.2, legend = c("Savanna species", "Generalist species"),
-       pch = c(16,15),
-       col =  c("#d95f02","#1b9e77"),
-       cex = 0.9)
-
-text(x = 0.4, y = 1.67, labels = "(a)", cex = 1.2)
-
-#just losses due to mortality
-
-plot(NA,
-     ylim = c(-.8, 0),
-     xlim = c(0.4, 2.6),
-     xaxt = "n",
-     yaxt = "n",
-     xlab = "",
-     ylab = expression(paste("Basal area lost\nto mortality (%)")),
-     cex.lab = 1.2)
-
-abline(h = 0)
-
-points(ba_died_s ~ ba_tot_2006, data = change_ba_prop, 
-       pch = 21,
-       col = "#d95f02",
-       bg = "#d95f02")
-
-mod <- lm(log(-ba_died_s + 1) ~ log(ba_tot_2006), data = change_ba_prop)
-pred <- predict(mod, newdata = new)
-lines(-(exp(pred) - 1) ~ new$ba_tot_2006,
-      col = "#d95f02",
-      lty = 1)
-
-
-points(ba_died_g ~ ba_tot_2006, data = change_ba_prop, 
-       pch = 22,
-       col = "#1b9e77",
-       bg = "#1b9e77")
-mod <- lm(log(-ba_died_g + 1) ~ log(ba_tot_2006), data = change_ba_prop)
-pred <- predict(mod, newdata = new)
-lines(-(exp(pred) - 1) ~ new$ba_tot_2006,
-      col = "#1b9e77",
-      lty = 1)
-
-axis(side = 2, at = pretty(c(-.8, 0)), labels = pretty(c(-.8, 0))*100)
-axis(side = 1, at = pretty(change_ba$ba_tot_2006), labels = NA)
+ggplot(stand_data, aes(x = Year, y = BA.above2011)) + 
+  # geom_jitter(aes(col = C.Cerrado..G.generalist.)) +
+  geom_line(aes(group = Current.number, col = C.Cerrado..G.generalist.))+ 
+  stat_smooth(aes(col = C.Cerrado..G.generalist.), method = "loess")
 
 
-text(x = 0.4, y = -.05, labels = "(b)", cex = 1.2)
 
-#without dead trees
-plot(NA,
-     ylim = c(-0.7, 1.8),
-     xlim = c(0.4, 2.6),
-     xaxt = "n",
-     yaxt = "n",
-     xlab = "",
-     ylab = expression(paste("Change in basal area \n without mortality (%)")),
-     cex.lab = 1.2)
+#test to check if a repeat measures model would work
+all_data$Unique_id <- paste0(all_data$Plot, ".", all_data$Current.number, ".", 1:nrow(all_data))
 
-abline(h = 0)
+#there absolutely has to be a way to pivot_longer this, but I couldn't figure it out
+test <- data.frame(Plot = character(),
+                   Unique_id = character(),
+                   FT = character(),
+                   Species = character(),
+                   Year = integer(),
+                   Height = numeric(),
+                   Diam = numeric(),
+                   BA_above = numeric(),
+                   PC1 = numeric(),
+                   PC2 = numeric(),
+                   diam_inc = numeric(),
+                   ht_inc = numeric())
+for(i in 1:length(unique(all_data$Unique_id))){
+  id <- all_data$Unique_id[i]
+  test[(2*i-1):(2*i), "Plot"] <- subset(all_data, Unique_id == id)$"Plot"
+  test[(2*i-1):(2*i), "Unique_id"] <- id
+  test[(2*i-1):(2*i), "FT"] <- subset(all_data, Unique_id == id)$"C.Cerrado..G.generalist."
+  test[(2*i-1):(2*i), "Species"] <- subset(all_data, Unique_id == id)$Code
+  test[(2*i-1):(2*i), "Year"] <- c(2006, 2011)
+  test[(2*i-1):(2*i), "PC1"] <- subset(all_data, Unique_id == id)$PC1
+  test[(2*i-1):(2*i), "PC2"] <- subset(all_data, Unique_id == id)$PC2
+  test[(2*i-1), "Height"] <- subset(all_data, Unique_id == id)$H.2006
+  test[(2*i), "Height"] <- subset(all_data, Unique_id == id)$H.2011..m.
+  test[(2*i-1), "Diam"] <- subset(all_data, Unique_id == id)$dg.2006.cm
+  test[(2*i), "Diam"] <- subset(all_data, Unique_id == id)$dg.2011.cm
+  test[(2*i-1), "BA_above"] <- subset(all_data, Unique_id == id)$BA.above2006
+  test[(2*i), "BA_above"] <- subset(all_data, Unique_id == id)$BA.above2011
+  test[(2*i-1), "diam_inc"] <- subset(all_data, Unique_id == id)$inc_06_11
+  test[(2*i), "diam_inc"] <- subset(all_data, Unique_id == id)$inc_11_16
+  test[(2*i-1), "ht_inc"] <- subset(all_data, Unique_id == id)$inc_06_11_ht
+  test[(2*i), "ht_inc"] <- subset(all_data, Unique_id == id)$inc_11_16_ht
+}
 
-points(ba_live_s ~ ba_tot_2006, data = change_ba_prop,
-       pch = 21,
-       col = "#d95f02",
-       bg = "#d95f02")
-mod <- lm(log(ba_live_s + 1) ~ log(ba_tot_2006), data = change_ba_prop)
-pred <- predict(mod, newdata = new)
-lines(exp(pred) - 1 ~ new$ba_tot_2006,
-      col = "#d95f02",
-      lty = 1)
+model <- lmer(ht_inc ~ Height + BA_above*FT + PC1 + PC2 +
+                (1|Plot) + (1|Species) + (1|Year),
+              data = test)
 
-points(ba_live_g ~ ba_tot_2006, data = change_ba_prop,
-       pch = 22,
-       col = "#1b9e77",
-       bg = "#1b9e77")
-mod <- lm(log(ba_live_g + 1) ~ log(ba_tot_2006), data = change_ba_prop)
-pred <- predict(mod, newdata = new)
-lines(exp(pred) - 1 ~ new$ba_tot_2006,
-      col = "#1b9e77",
-      lty = 1)
+summary(model)
 
-axis(side = 1, at = pretty(change_ba$ba_tot_2006), labels = pretty(change_ba$ba_tot_2006)*10)
-axis(side = 2, at = pretty(c(-0.7, 1.8)), labels = pretty(c(-0.7, 1.8))*100)
-
-mtext(side = 1, line = 2.9, text = expression(paste("Original basal area (m"^2, " ha"^-1, ")")),
-      cex = 1.3)
-
-
-text(x = 0.4, y = 1.67, labels = "(c)", cex = 1.2)
-
-dev.off()
