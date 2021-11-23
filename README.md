@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/250064456.svg)](https://zenodo.org/badge/latestdoi/250064456)
+
 This repository contains code and data used in the analysis for the manuscript accepted in Journal of Ecology, Not all trees can make a forest: Tree species composition and competition control forest encroachment in a tropical savanna, by Samuel W. Flake, Eliane Honda, Natashi Pilon, Giselda Durigan, and William A. Hoffmann. 
 
 All data processing, analysis, and figure creation are done in one script (assis_growth_all_trees_with_height_analysis.R). Inputs are tree-level data, plot-level data, and soils data. For details of data collection, see Assis et al. 2011 and Honda & Durigan 2016. 
