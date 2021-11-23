@@ -348,7 +348,7 @@ t.test(inc_11_16 ~ C.Cerrado..G.generalist., data = all_data)
 #------------------------------------------------------------------------------
 library("viridis")
 
-tiff(filename="./plots/soil_PCA_axes_1_2.tiff", 
+tiff(filename="./plots/Figure S2 soil_PCA_axes_1_2.tiff", 
      type = "cairo",
      antialias = "gray",
      compression = "lzw",
@@ -422,7 +422,7 @@ dev.off()
 
 
 #----------------------------------------------------------------------
-# Model comparison for table 1
+# Model comparison for table S2
 #----------------------------------------------------------------------
 
 data_06 <- subset(all_data, inc_06_11 >= min.growth & inc_06_11 <= 3 &  dg.2006.cm > 5)
@@ -1339,11 +1339,11 @@ hl2 <- hoslem.test(mort_ft_ci_soils_glm_2016$y,
 #-----------------------------------------------------
 
 #------------------------------------------------------------------------------
-# Figure S xxx
+# Figure S1
 # Overall plot-level results
 #------------------------------------------------------------------------------
 
-svg(filename="./plots/Figure 1 overall growth basal area.svg", 
+svg(filename="./plots/Figure S1 overall growth basal area.svg", 
      width = 3, 
      height=3, 
      pointsize=7)
@@ -1373,11 +1373,11 @@ dev.off()
 
 
 #------------------------------------------------------------------------------
-# Figure xxx
+# Figure S3
 # Growth and mortality ~ soil variables
 #------------------------------------------------------------------------------
 
-svg(filename="./plots/Figure 3 soil variables.svg", 
+svg(filename="./plots/Figure S3 soil variables.svg", 
      width = 6, 
      height=9, 
      pointsize=8)
@@ -1698,10 +1698,10 @@ dev.off()
 
 
 #------------------------------------------------------------------------------
-# figure of soil effects for the appendix
+# figure S4 soil effects for the appendix
 #------------------------------------------------------------------------------
 
-svg(filename="./plots/Figure S3 soil variables no covariates.svg", 
+svg(filename="./plots/Figure S4 soil variables no covariates.svg", 
     width = 6, 
     height=9, 
     pointsize=8)
@@ -2079,7 +2079,7 @@ dev.off()
 
 
 #------------------------------------------------------------------------------
-# Figure 6
+# Figure 4
 # Mortality ~ BA by FT
 #------------------------------------------------------------------------------
 eff <- Effect(focal.predictors = c("BA.above2006", "C.Cerrado..G.generalist."), 
@@ -2088,7 +2088,7 @@ eff2 <- Effect(focal.predictors = c("BA.above2011", "C.Cerrado..G.generalist."),
               mod = mort_ft_ci_soils_glm_2016, xlevels = 100)
 
 
-tiff(filename="./plots/Figure 6 mortality_ba_above_by_fg.tiff", 
+tiff(filename="./plots/Figure 4 mortality_ba_above_by_fg.tiff", 
      type = "cairo",
      antialias = "gray",
      compression = "lzw",
@@ -2152,73 +2152,6 @@ legend("topleft", legend = c("Generalist species, 2006", "Generalist species, 20
 
 
 dev.off()
-
-#------------------------------------------------------------------------------
-# Supplemental Figure S2
-# Size-growth relationship without accounting for covariates
-#------------------------------------------------------------------------------
-tiff(filename="./plots/Figure S2 diameter effect plot.tiff", 
-     type = "cairo",
-     antialias = "gray",
-     compression = "lzw",
-     units="in", 
-     width = 3, 
-     height=3, 
-     pointsize=7, 
-     res=600)
-
-par(mar = c(5.1, 5.1, 2, 1))
-
-model1 <- lmer(inc_06_11 ~ 
-                 scale(log(dg.2006.cm)) +
-                 scale(TBA.2006.m2ha.1) * C.Cerrado..G.generalist. +
-                 poly(PC1, 2) + poly(PC2, 2) +
-                 (1|Code) + (1|Plot), data = data_06)
-model2 <- lmer(inc_11_16 ~ scale(log(dg.2011.cm)) +
-                 scale(TBA.2011.m2.ha.1) * C.Cerrado..G.generalist. +
-                 poly(PC1, 2) + poly(PC2, 2) + , 
-               data = data_11)
-eff <- Effect(focal.predictors = c("dg.2006.cm"), 
-              mod = model1, xlevels = 100)
-dat <- data.frame(y = eff$fit,
-                  lower = eff$lower,
-                  upper = eff$upper,
-                  diam = eff[["x"]][["dg.2006.cm"]])
-eff <- Effect(focal.predictors = c("dg.2011.cm"), 
-              mod = model2, xlevels = 100)
-dat2 <- data.frame(y = eff$fit,
-                   lower = eff$lower,
-                   upper = eff$upper,
-                   diam = eff[["x"]][["dg.2011.cm"]])
-
-plot(x = NA, 
-     xlim = c(0, 55),
-     ylim = c(0.1, 0.5),
-     xlab = "",
-     ylab = "",
-     xaxt = "n", 
-     yaxt = "n")
-
-lines(dat$y ~ dat$diam, col = "darkblue", lwd = 2)
-polygon(c(dat$diam, rev(dat$diam)), c(dat$upper, rev(dat$lower)),
-        col = addTrans("darkblue",30), border = NA)
-
-lines(dat2$y ~ dat2$diam, col = "magenta", lwd = 2)
-polygon(c(dat2$diam, rev(dat2$diam)), c(dat2$upper, rev(dat2$lower)),
-        col = addTrans("magenta",30), border = NA)
-
-mtext(side = 1, text = "Original diameter (cm)", line = 2.7, cex = 1.8)
-mtext(side = 2, text = expression(paste("Diameter increment (cm year"^"-1", ")")), 
-      line = 2.7, cex = 1.8)
-
-axis(side =1, cex.axis = 1.5)
-axis(side =2, cex.axis = 1.5)
-
-legend("topright", legend = c("2006-2011", "2011-2016"), col = c("darkblue", "magenta"),
-       lty = 1)
-
-dev.off()
-
 
 #------------------------------------------------------------------------------
 # Figure 2
@@ -2293,7 +2226,7 @@ change_ba_prop[, c(4, 6, 8, 10)] <- change_ba_prop[, c(4,6,8,10)]/change_2006$BA
 
 #make three-panel figure
 
-svg(filename="./plots/Figure 1 change in basal area proportional.svg",
+svg(filename="./plots/Figure 2 change in basal area proportional.svg",
      width = 3.6, 
      height=8, 
      pointsize=7) 
@@ -2435,205 +2368,11 @@ text(x = 0.4, y = 1.67, labels = "(c)", cex = 1.2)
 
 dev.off()
 
-#-------------------------------------------------------------------------------
-# height growth figure figure xx
-#-------------------------------------------------------------------------------
-data_11_ht <- subset(all_data, inc_11_16_ht >= min.growth & dg.2011.cm > 5) %>%
-  dplyr::rename(height = H.2011..m., diam = dg.2011.cm)
-
-ft_ci_soils_11_ht <- lmer(inc_11_16_ht ~ 
-                            scale(height) +
-                            scale(BA.above2011) * C.Cerrado..G.generalist. +
-                            poly(PC1, 2) + poly(PC2, 2) +
-                            (1|Code) + (1|Plot),
-                          data = data_11_ht)
-
-ft_ci_soils_11_diam <- lmer(inc_11_16 ~ 
-                              scale(log(diam)) +
-                              scale(BA.above2011) * C.Cerrado..G.generalist. +
-                              poly(PC1, 2) + poly(PC2, 2) +
-                              (1|Code),
-                            data = data_11_ht)
-
-nyear <- 40
-c_growth <- data.frame(year = numeric(nyear),
-                       height = numeric(nyear))
-
-height <- 8 #mean(all_data[all_data$C.Cerrado..G.generalist. == "C" & all_data$Added == 2011, ]$H.2011..m., na.rm = TRUE)
-ft <- "C"
-PC1 <- mean(plot_data$PC1)
-PC2 <- mean(plot_data$PC2)
-BA.above2011 <- 0
-
-for(year in 1:nyear){
-  newdat <- data.frame(height = height,
-                       C.Cerrado..G.generalist. = ft,
-                       PC1 = PC1,
-                       PC2 = PC2,
-                       BA.above2011 = BA.above2011)
-  growth <- predict(ft_ci_soils_11_ht, newdata = newdat, re.form = NA)
-  height <- height + growth
-  c_growth$year[year] <- year
-  c_growth$height[year] <- height
-  
-}
-
-g_growth <- data.frame(year = numeric(nyear),
-                       height = numeric(nyear))
-
-height <- 5 #mean(all_data[all_data$C.Cerrado..G.generalist. == "G" & all_data$Added == 2011, ]$H.2011..m., na.rm = TRUE)
-ft <- "G"
-PC1 <- mean(plot_data$PC1)
-PC2 <- mean(plot_data$PC2)
-BA.above2011 <- 0
-for(year in 1:nyear){
-  newdat <- data.frame(height = height,
-                       C.Cerrado..G.generalist. = ft,
-                       PC1 = PC1,
-                       PC2 = PC2,
-                       BA.above2011 = BA.above2011)
-  growth <- predict(ft_ci_soils_11_ht, newdata = newdat, re.form = NA)
-  height <- height + growth
-  g_growth$year[year] <- year
-  g_growth$height[year] <- height
-}
-
-plot(c_growth$height ~ c_growth$year, type = "l", ylim = c(0,15))
-lines(g_growth$height ~ g_growth$year, lty = 2)
-
-#-------------------------------------------------------------------------------
-# simulating a whole stand
-
-recruits <- data_11_ht %>%
-  dplyr::filter(Added == 2011 & !is.na(height) & !is.na(diam))
-
-new_stand <- data.frame(Current.number = character(),
-                        Year = numeric(),
-                        height = numeric(),
-                        C.Cerrado..G.generalist. = character(),
-                        diam = numeric(),
-                        PC1 = numeric(),
-                        PC2 = numeric(),
-                        BA.above2011 = numeric())
-BAtot <- 0
-
-while(BAtot < 5){
-  c_tree <- recruits[recruits$C.Cerrado..G.generalist. == "C", ] %>%
-    '['(sample(nrow(.), 1), ) %>% #this might be clunky, but it selects one row at random
-    dplyr::select(Current.number, height, C.Cerrado..G.generalist., diam) %>%
-    dplyr::mutate(PC1 = mean(plot_data$PC1),
-                  PC2 = mean(plot_data$PC2),
-                  BA.above2011 = 0,
-                  Year = 0) %>%
-    dplyr::mutate(height = height + rnorm(n = nrow(.), mean = 0, sd = 0.02))
-  g_tree <- recruits[recruits$C.Cerrado..G.generalist. == "G", ] %>%
-    '['(sample(nrow(.), 1), ) %>%
-    dplyr::select(Current.number, height, C.Cerrado..G.generalist., diam) %>%
-    dplyr::mutate(PC1 = mean(plot_data$PC1),
-                  PC2 = mean(plot_data$PC2),
-                  BA.above2011 = 0,
-                  Year = 0) %>%
-    dplyr::mutate(height = height + rnorm(n = nrow(.), mean = 0, sd = 0.02))
-  
-  new_stand <- dplyr::bind_rows(new_stand, c_tree, g_tree)
-  
-  BAtot <- sum((new_stand$diam / 2)^2 * pi) / 10000 #convert to m^2 
-  BAtot <- BAtot * 10 #convert to equivalent BA for a 0.1-ha plot
-  
-}
-
-for(i in 1:nrow(new_stand)){
-  new_stand$BA.above2011[i] <- sum(((new_stand[new_stand$height >= new_stand$height[i], "diam"]/2)^2 * pi), na.rm = TRUE) / 10000
-}
-
-stand_data <- new_stand
-nyear <- 20
-for(year in 1:nyear){
-  height_inc <- predict(ft_ci_soils_11_ht, newdata = stand_data[stand_data$Year == (year - 1), ], re.form = NA)
-  diam_inc <- predict(ft_ci_soils_11_diam, newdata = stand_data[stand_data$Year == (year - 1), ], re.form = NA)
-  
-  update <- stand_data[stand_data$Year == (year - 1), ] %>%
-    mutate(Year = year,
-           height = height + height_inc,
-           diam = diam + diam_inc)
-  
-  for(i in 1:nrow(update)){
-    update$BA.above2011[i] <- sum((update[update$height >= update$height[i], "diam"]/2)^2 * pi, na.rm = TRUE) / 10000
-  }
-  
-  stand_data <- dplyr::bind_rows(stand_data, update)
-}
-
-ggplot(stand_data, aes(x = Year, y = height)) + 
-  geom_jitter(aes(col = C.Cerrado..G.generalist.)) +
-  stat_smooth(aes(col = C.Cerrado..G.generalist.), method = "loess")
-
-ggplot(stand_data, aes(x = Year, y = diam)) + 
-  geom_jitter(aes(col = C.Cerrado..G.generalist.)) +
-  stat_smooth(aes(col = C.Cerrado..G.generalist.), method = "loess")
-
-ggplot(stand_data, aes(x = Year, y = BA.above2011)) + 
-  # geom_jitter(aes(col = C.Cerrado..G.generalist.)) +
-  geom_line(aes(group = Current.number, col = C.Cerrado..G.generalist.))+ 
-  stat_smooth(aes(col = C.Cerrado..G.generalist.), method = "loess")
-
-#-------------------------------------------------------------------------------
-# Figure of simulated height growth
-#-------------------------------------------------------------------------------
-
-svg(filename="./plots/Figure xx height simulation.svg", 
-    width = 6, 
-    height=3, 
-    pointsize=7)
-
-par(mar = c(5.1, 5.1, 2, 1),
-    mfrow = c(1,2))
-
-plot(NA,
-     xlim = c(0,20),
-     ylim = c(min(stand_data$height), max(stand_data$height)),
-     pch = 21,
-     bg = "darkgray",
-     xlab = "",
-     ylab = "",
-     axes = FALSE)
-
-stand_data$Year_jitter <- stand_data$Year + rnorm(n = nrow(stand_data), 0, 0.2)
-
-for(i in 1:length(unique(stand_data$Current.number))){
-  curr_num <- unique(stand_data$Current.number)[i]
-  temp <- subset(stand_data, Current.number == curr_num)
-  points(height ~ Year, data = temp, pch = 21,
-         col = ifelse(temp$C.Cerrado..G.generalist.[1] == "C", "#d95f02", "#1b9e77"),
-         bg = ifelse(temp$C.Cerrado..G.generalist.[1] == "C", "#d95f02", "#1b9e77"))
-}
-
-#plot of BA above over time
-plot(NA,
-     xlim = c(0,20),
-     ylim = c(min(stand_data$BA.above2011), max(stand_data$BA.above2011)),
-     pch = 21,
-     bg = "darkgray",
-     xlab = "",
-     ylab = "",
-     axes = FALSE)
-
-stand_data$Year_jitter <- stand_data$Year + rnorm(n = nrow(stand_data), 0, 0.2)
-
-for(i in 1:length(unique(stand_data$Current.number))){
-  curr_num <- unique(stand_data$Current.number)[i]
-  temp <- subset(stand_data, Current.number == curr_num)
-  lines(BA.above2011 ~ Year, data = temp, pch = 21,
-         col = ifelse(temp$C.Cerrado..G.generalist.[1] == "C", "#d95f02", "#1b9e77"),
-         bg = ifelse(temp$C.Cerrado..G.generalist.[1] == "C", "#d95f02", "#1b9e77"))
-}
-
-dev.off()
 #------------------------------------------------------------------------------
-# Figure 4 
+# Figure 3
 # Growth ~ diam by FT
 #------------------------------------------------------------------------------
-tiff(filename="./plots/Figure 4 differences in growth by fg.tiff",
+tiff(filename="./plots/Figure 3 differences in growth by fg.tiff",
      type = "cairo",
      antialias = "gray",
      compression = "lzw",
@@ -2768,88 +2507,11 @@ text(x = 1.7, y = 0.38, labels = "(b)", cex = 1.5)
 dev.off()
 
 
-#-------------------------------------------------------------------------------
-#
-#
-
-#test to check if a repeat measures model would work
-all_data$Unique_id <- paste0(all_data$Plot, ".", all_data$Current.number, ".", 1:nrow(all_data))
-
-trees_all_live <- all_data[all_data$Alive2006 == "v" & all_data$Alive2011 == "v" & all_data$Alive2016 == "v", ]
-trees_2011_recruits <- all_data[all_data$Added == 2011, ]
-
-#there absolutely has to be a way to pivot_longer this, but I couldn't figure it out
-long_data <- data.frame(Plot = character(),
-                   Unique_id = character(),
-                   FT = factor(levels = c("C", "G")),
-                   Species = character(),
-                   Year = integer(),
-                   Height = numeric(),
-                   Diam = numeric(),
-                   BA_above = numeric(),
-                   PC1 = numeric(),
-                   PC2 = numeric(),
-                   diam_inc = numeric(),
-                   ht_inc = numeric())
-for(i in 1:length(unique(all_data$Unique_id))){
-  id <- all_data$Unique_id[i]
-  long_data[(3*i-2):(3*i), "Plot"] <- subset(all_data, Unique_id == id)$"Plot"
-  long_data[(3*i-2):(3*i), "Unique_id"] <- id
-  long_data[(3*i-2):(3*i), "FT"] <- subset(all_data, Unique_id == id)$"C.Cerrado..G.generalist."
-  long_data[(3*i-2):(3*i), "Species"] <- subset(all_data, Unique_id == id)$Code
-  long_data[(3*i-2):(3*i), "Year"] <- c(2006, 2011, 2016)
-  long_data[(3*i-2):(3*i), "PC1"] <- subset(all_data, Unique_id == id)$PC1
-  long_data[(3*i-2):(3*i), "PC2"] <- subset(all_data, Unique_id == id)$PC2
-  long_data[(3*i-2), "Height"] <- subset(all_data, Unique_id == id)$H.2006
-  long_data[(3*i-1), "Height"] <- subset(all_data, Unique_id == id)$H.2011..m.
-  long_data[(3*i), "Height"] <- subset(all_data, Unique_id == id)$H.2016.m
-  long_data[(3*i-2), "Diam"] <- subset(all_data, Unique_id == id)$dg.2006.cm
-  long_data[(3*i-1), "Diam"] <- subset(all_data, Unique_id == id)$dg.2011.cm
-  long_data[(3*i), "Diam"] <- subset(all_data, Unique_id == id)$dg.2016.cm
-  long_data[(3*i-2), "BA_above"] <- subset(all_data, Unique_id == id)$BA.above2006
-  long_data[(3*i-1), "BA_above"] <- subset(all_data, Unique_id == id)$BA.above2011
-  long_data[(3*i), "BA_above"] <- subset(all_data, Unique_id == id)$BA.above2016
-  long_data[(3*i-2), "diam_inc"] <- subset(all_data, Unique_id == id)$inc_06_11
-  long_data[(3*i-1), "diam_inc"] <- subset(all_data, Unique_id == id)$inc_11_16
-  long_data[(3*i), "diam_inc"] <- NA
-  long_data[(3*i-2), "ht_inc"] <- subset(all_data, Unique_id == id)$inc_06_11_ht
-  long_data[(3*i-1), "ht_inc"] <- subset(all_data, Unique_id == id)$inc_11_16_ht
-  long_data[(3*i), "ht_inc"] <- NA
-}
-
-test <- long_data[long_data$Unique_id %in% trees_all_live$Unique_id &
-                    long_data$Plot %in% c(2,3,4,5,11:17,19) &
-                    !is.na(long_data$FT), ]
-test2 <- long_data[long_data$Unique_id %in% trees_2011_recruits$Unique_id &
-                     long_data$Plot %in% c(2,3,4,5,11:17,19) &
-                     !is.na(long_data$FT), ]
-trees_to_use1 <- unique(test$Unique_id)[sample(length(unique(test$Unique_id)), 200)]
-trees_to_use2 <- unique(test2$Unique_id)[sample(length(unique(test2$Unique_id)), 100)]
-
-ggplot(test[test$Unique_id %in% trees_to_use1, ], aes(x = Year, y = BA_above)) + 
-  geom_line(aes(group = Unique_id, col = FT), alpha = 0.2, size = 0.003)+ 
-  stat_smooth(data = test, aes(col = FT), method = "lm", size = 1.5)+ 
-  # geom_line(data = test2[test2$Unique_id %in% trees_to_use2, ], 
-  #           aes(x = Year, y = BA_above, group = Unique_id, col = FT), 
-  #           alpha = 0.2, size = 0.003)+ 
-  stat_smooth(data = test2, aes(col = FT), method = "lm", 
-              size = 1.5, linetype = 2)+
-  scale_color_manual(values=c("#d95f02","#1b9e77"))
-
-summary(lm(I(BA_above*10) ~ I(Year-2006)*FT, data = test))
-summary(lm(I(BA_above*10) ~ I(Year-2011)*FT, data = test2))
-
-t.test(BA_above ~ FT, data = test[test$Year == 2006, ])
-t.test(BA_above ~ FT, data = test[test$Year == 2011, ])
-t.test(BA_above ~ FT, data = test[test$Year == 2016, ])
-
-#how large are savanna and generalist trees?
-mean(test2[test2$FT == "G" & test2$Year == 2011, ]$Diam, na.rm = TRUE)
 
 #-------------------------------------------------------------------------------
-# Figure xx change in BA_above for trees in the field
+# Figure 5 change in BA_above for trees in the field
 
-svg(filename="./plots/Figure xx change in ba_above.svg", 
+svg(filename="./plots/Figure 5 change in ba_above.svg", 
     width = 6, 
     height=4, 
     pointsize=9)
@@ -2906,7 +2568,7 @@ dev.off()
 
 
 #-------------------------------------------------------------------------------
-# correlation matrix for predictors
+# Table S1 correlation matrix for predictors
 #-------------------------------------------------------------------------------
 
 #2006 data
@@ -2924,7 +2586,7 @@ colnames(cormat11) <- colnames(cormat06)
 cormat11
 
 #-------------------------------------------------------------------------------
-# Quick figure showing height:diameter ratios
+# Figure 6 height:diameter ratios
 #-------------------------------------------------------------------------------
 
 plot(log(H.2011..m.) ~ log(dg.2011.cm), data = data_11[data_11$C.Cerrado..G.generalist. == "C", ])
@@ -2964,8 +2626,8 @@ boxplot(data_11[data_11$Savanna == TRUE &
         ylab = "",
         ylim = c(0, 2.4))
 
-# data_11$Savanna <- as.factor(data_11$Savanna)
-# data_11$C.Cerrado..G.generalist. <- as.factor(data_11$C.Cerrado..G.generalist.)
+data_11$Savanna <- as.factor(data_11$Savanna)
+data_11$C.Cerrado..G.generalist. <- as.factor(data_11$C.Cerrado..G.generalist.)
 mod <- aov(lm(HD_ratio ~ Savanna*C.Cerrado..G.generalist., data = data_11))
 TukeyHSD(mod)
 
@@ -2978,4 +2640,50 @@ title(ylab = expression(paste("Height:diameter ratio (m cm"^"-1", ")")))
 dev.off()
 
 
+#-------------------------------------------------------------------------------
+# Figure S5 plots of residuals ~ fitted
+
+svg(filename="./plots/Figure S5 residuals vs fitted.svg", 
+    width = 6, 
+    height=6, 
+    pointsize=9)
+par(mfrow = c(2,2))
+
+plot(residuals(ft_ci_soils_06) ~ fitted(ft_ci_soils_06),
+     xlab = "Fitted",
+     ylab = "Residuals",
+     main = "Diameter growth, 2006-2011",
+     pch = 21, 
+     bg = addTrans("gray", 50),
+     col = NA)
+abline(h = 0)
+
+plot(residuals(ft_ci_soils_11) ~ fitted(ft_ci_soils_11),
+     xlab = "Fitted",
+     ylab = "Residuals",
+     main = "Diameter growth, 2011-2016",
+     pch = 21, 
+     bg = addTrans("gray", 50),
+     col = NA)
+abline(h = 0)
+
+plot(residuals(ft_ci_soils_06_ht) ~ fitted(ft_ci_soils_06_ht),
+     xlab = "Fitted",
+     ylab = "Residuals",
+     main = "Height growth, 2006-2011",
+     pch = 21, 
+     bg = addTrans("gray", 50),
+     col = NA)
+abline(h = 0)
+
+plot(residuals(ft_ci_soils_11_ht) ~ fitted(ft_ci_soils_11_ht),
+     xlab = "Fitted",
+     ylab = "Residuals",
+     main = "Height growth, 2011-2016",
+     pch = 21, 
+     bg = addTrans("gray", 50),
+     col = NA)
+abline(h = 0)
+
+dev.off()
 
